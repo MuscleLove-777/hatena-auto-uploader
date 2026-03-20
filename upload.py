@@ -181,13 +181,14 @@ def download_images_from_gdrive():
             if ext in IMAGE_EXTENSIONS:
                 image_files.append(f)
 
-    # gdownが空リストを返した場合、フォルダを直接スキャン
+    # gdownが空リストを返した場合、フォルダを再帰的にスキャン
     if not image_files and os.path.exists(output_dir):
-        for fname in os.listdir(output_dir):
-            fpath = os.path.join(output_dir, fname)
-            ext = os.path.splitext(fname)[1].lower()
-            if os.path.isfile(fpath) and ext in IMAGE_EXTENSIONS:
-                image_files.append(fpath)
+        for root, dirs, filenames in os.walk(output_dir):
+            for fname in filenames:
+                fpath = os.path.join(root, fname)
+                ext = os.path.splitext(fname)[1].lower()
+                if ext in IMAGE_EXTENSIONS:
+                    image_files.append(fpath)
 
     print(f"画像ファイル数: {len(image_files)}")
     return image_files
