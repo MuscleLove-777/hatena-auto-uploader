@@ -12,6 +12,9 @@ import hashlib
 import base64
 from datetime import datetime, timezone, timedelta
 
+import re
+import xml.etree.ElementTree as ET
+
 import requests
 import gdown
 
@@ -268,7 +271,6 @@ def upload_image_to_fotolife(image_path):
     if resp.status_code in (200, 201):
         print("Fotolife画像アップロード成功!")
         # レスポンスXMLから画像URLを抽出
-        import xml.etree.ElementTree as ET
         try:
             root = ET.fromstring(resp.text)
             # hatena:imageurl タグから取得
@@ -289,7 +291,6 @@ def upload_image_to_fotolife(image_path):
                 return syntax
 
             # fallback: レスポンス全体から画像URLを探す
-            import re
             url_match = re.search(r'https?://cdn-ak\.f\.st-hatena\.com/images/[^\s<"]+', resp.text)
             if url_match:
                 return url_match.group(0)
@@ -306,9 +307,33 @@ def upload_image_to_fotolife(image_path):
         return None
 
 
+def get_blog_domain():
+    """ブログ一覧APIから正しいブログドメインを自動取得"""
+    blog_list_url = f"https://blog.hatena.ne.jp/{HATENA_ID}/atom"
+    print(f"ブログ一覧APIからドメイン取得中...")
+    resp = requests.get(blog_list_url, auth=(HATENA_ID, HATENA_API_KEY))
+    if resp.status_code != 200:
+        print(f"ブログ一覧API失敗: {resp.status_code}")
+        return HATENA_BLOG_DOMAIN
+
+    # collectionのhrefからドメインを抽出
+    match = re.search(r'collection href="https://blog\.hatena\.ne\.jp/[^/]+/([^/]+)/atom/entry"', resp.text)
+    if match:
+        domain = match.group(1)
+        print(f"正しいブログドメイン取得: {domain}")
+        if domain != HATENA_BLOG_DOMAIN:
+            print(f"WARNING: 環境変数のドメインと不一致! 環境変数={HATENA_BLOG_DOMAIN}, 実際={domain}")
+        return domain
+
+    print("ドメイン抽出失敗、環境変数のドメインを使用")
+    return HATENA_BLOG_DOMAIN
+
+
 def create_blog_post(title, content_html, categories):
     """Hatena Blog AtomPub APIでブログ記事を作成"""
-    endpoint = f"https://blog.hatena.ne.jp/{HATENA_ID}/{HATENA_BLOG_DOMAIN}/atom/entry"
+    # ブログ一覧APIから正しいドメインを取得
+    blog_domain = get_blog_domain()
+    endpoint = f"https://blog.hatena.ne.jp/{HATENA_ID}/{blog_domain}/atom/entry"
 
     # カテゴリXMLを生成
     category_xml = ""
@@ -330,46 +355,20 @@ def create_blog_post(title, content_html, categories):
 
     print(f"はてなブログに記事投稿中: {title}")
     print(f"エンドポイント: {endpoint}")
-    print(f"HATENA_ID長さ: {len(HATENA_ID)}")
-    print(f"HATENA_BLOG_DOMAIN長さ: {len(HATENA_BLOG_DOMAIN)}")
-    print(f"ドメインにhatenablog含む: {'hatenablog' in HATENA_BLOG_DOMAIN}")
-    print(f"ドメイン末尾: ...{HATENA_BLOG_DOMAIN[-15:]}")
-    print(f"API_KEY長さ: {len(HATENA_API_KEY)}")
 
-    # 診断: ドメインの隠し文字チェック
-    print(f"HATENA_BLOG_DOMAIN repr: {repr(HATENA_BLOG_DOMAIN)}")
-    print(f"HATENA_ID repr: {repr(HATENA_ID)}")
-
-    # 診断: ブログ一覧API（ドメイン不要）で認証自体が通るか確認
-    blog_list_url = f"https://blog.hatena.ne.jp/{HATENA_ID}/atom"
-    print(f"ブログ一覧API確認: {blog_list_url}")
-    list_resp = requests.get(blog_list_url, auth=(HATENA_ID, HATENA_API_KEY))
-    print(f"ブログ一覧結果: {list_resp.status_code}")
-    if list_resp.status_code == 200:
-        print(f"ブログ一覧レスポンス(先頭500): {list_resp.text[:500]}")
-    else:
-        print(f"ブログ一覧レスポンス: {list_resp.text[:300]}")
-
-    # まずWSSE認証で試行
+    # WSSE認証で投稿
     resp = requests.post(endpoint, headers=headers, data=xml_body.encode('utf-8'))
 
-    if resp.status_code in (200, 201):
-        print("ブログ記事投稿成功! (WSSE認証)")
-    else:
-        print(f"WSSE認証で失敗: {resp.status_code} - {resp.text[:300]}")
+    if resp.status_code not in (200, 201):
+        print(f"WSSE認証で失敗: {resp.status_code}")
         # Basic認証でフォールバック
         print("Basic認証でリトライ...")
         headers_basic = {'Content-Type': 'application/x.atom+xml'}
         resp = requests.post(endpoint, headers=headers_basic, data=xml_body.encode('utf-8'),
                              auth=(HATENA_ID, HATENA_API_KEY))
-        if resp.status_code in (200, 201):
-            print("ブログ記事投稿成功! (Basic認証)")
-        else:
-            print(f"Basic認証でも失敗: {resp.status_code} - {resp.text[:300]}")
 
     if resp.status_code in (200, 201):
-        # レスポンスからURLを抽出
-        import xml.etree.ElementTree as ET
+        print("ブログ記事投稿成功!")
         try:
             root = ET.fromstring(resp.text)
             ns = {'atom': 'http://www.w3.org/2005/Atom'}
