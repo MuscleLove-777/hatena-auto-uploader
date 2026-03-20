@@ -301,11 +301,14 @@ def create_blog_post(title, content_html, categories):
   </app:control>
 </entry>"""
 
-    headers = get_auth_headers()
-    headers['Content-Type'] = 'application/x.atom+xml'
+    headers = {
+        'Content-Type': 'application/x.atom+xml',
+    }
 
     print(f"はてなブログに記事投稿中: {title}")
-    resp = requests.post(endpoint, headers=headers, data=xml_body.encode('utf-8'))
+    # Basic認証を使用（WSSEより安定）
+    resp = requests.post(endpoint, headers=headers, data=xml_body.encode('utf-8'),
+                         auth=(HATENA_ID, HATENA_API_KEY))
 
     if resp.status_code in (200, 201):
         print("ブログ記事投稿成功!")
