@@ -1,4 +1,5 @@
 name: Hatena Blog Auto Post
+# Auto-uploader for Hatena Blog via AtomPub API
 
 on:
   schedule:
