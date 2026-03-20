@@ -330,8 +330,23 @@ def create_blog_post(title, content_html, categories):
 
     print(f"はてなブログに記事投稿中: {title}")
     print(f"エンドポイント: {endpoint}")
-    print(f"HATENA_ID: {HATENA_ID[:3]}*** (長さ: {len(HATENA_ID)})")
-    print(f"HATENA_BLOG_DOMAIN: {HATENA_BLOG_DOMAIN}")
+    print(f"HATENA_ID長さ: {len(HATENA_ID)}")
+    print(f"HATENA_BLOG_DOMAIN長さ: {len(HATENA_BLOG_DOMAIN)}")
+    print(f"ドメインにhatenablog含む: {'hatenablog' in HATENA_BLOG_DOMAIN}")
+    print(f"ドメイン末尾: ...{HATENA_BLOG_DOMAIN[-15:]}")
+    print(f"API_KEY長さ: {len(HATENA_API_KEY)}")
+
+    # まずGETでエンドポイント確認
+    print("GETでエンドポイント確認中...")
+    get_resp = requests.get(endpoint, headers=get_auth_headers())
+    print(f"GET結果: {get_resp.status_code}")
+    if get_resp.status_code != 200:
+        print(f"GETレスポンス: {get_resp.text[:300]}")
+        # Basic認証でGET
+        get_resp2 = requests.get(endpoint, auth=(HATENA_ID, HATENA_API_KEY))
+        print(f"GET(Basic)結果: {get_resp2.status_code}")
+        if get_resp2.status_code != 200:
+            print(f"GET(Basic)レスポンス: {get_resp2.text[:300]}")
 
     # まずWSSE認証で試行
     resp = requests.post(endpoint, headers=headers, data=xml_body.encode('utf-8'))
