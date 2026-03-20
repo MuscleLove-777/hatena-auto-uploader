@@ -329,10 +329,28 @@ def create_blog_post(title, content_html, categories):
     headers['Content-Type'] = 'application/x.atom+xml'
 
     print(f"はてなブログに記事投稿中: {title}")
+    print(f"エンドポイント: {endpoint}")
+    print(f"HATENA_ID: {HATENA_ID[:3]}*** (長さ: {len(HATENA_ID)})")
+    print(f"HATENA_BLOG_DOMAIN: {HATENA_BLOG_DOMAIN}")
+
+    # まずWSSE認証で試行
     resp = requests.post(endpoint, headers=headers, data=xml_body.encode('utf-8'))
 
     if resp.status_code in (200, 201):
-        print("ブログ記事投稿成功!")
+        print("ブログ記事投稿成功! (WSSE認証)")
+    else:
+        print(f"WSSE認証で失敗: {resp.status_code} - {resp.text[:300]}")
+        # Basic認証でフォールバック
+        print("Basic認証でリトライ...")
+        headers_basic = {'Content-Type': 'application/x.atom+xml'}
+        resp = requests.post(endpoint, headers=headers_basic, data=xml_body.encode('utf-8'),
+                             auth=(HATENA_ID, HATENA_API_KEY))
+        if resp.status_code in (200, 201):
+            print("ブログ記事投稿成功! (Basic認証)")
+        else:
+            print(f"Basic認証でも失敗: {resp.status_code} - {resp.text[:300]}")
+
+    if resp.status_code in (200, 201):
         # レスポンスからURLを抽出
         import xml.etree.ElementTree as ET
         try:
