@@ -69,20 +69,28 @@ CONTENT_TAG_MAP = {
 BASE_TAGS = [
     '筋肉女子', '筋トレ女子', 'フィットネス', 'マッスルガール',
     'ボディビル', 'ジム', 'ワークアウト', 'MuscleLove',
+    'ワキフェチ', '腕フェチ', '筋肉美', 'AI美女', 'むちむち', '褐色美女',
 ]
 
 # --- タイトルテンプレート ---
 TITLE_TEMPLATES = [
     "{category} | MuscleLove",
-    "{category} - 筋肉美の世界",
-    "{category} | マッスルラブ",
-    "{category} - 美しき筋肉",
+    "{category} - 筋肉美の世界💪",
+    "{category} | マッスルラブ🔥",
+    "{category} - 美しき筋肉✨",
     "MuscleLove | {category}",
-    "{category} - フィットネスアート",
-    "{category} - 強く美しく",
-    "{category} | 筋肉女子の魅力",
-    "{category} - 鍛え抜かれた美",
-    "{category} | 筋トレ女子ギャラリー",
+    "{category} - この身体、気になるでしょ？♡",
+    "{category} - 特別に見せてあげる♡",
+    "{category} | 今日もバキバキに仕上がったｗ💪",
+    "{category} - 鍛え抜かれた美🔥",
+    "{category} | 仕上がりえぐい✨",
+    "{category} - 破壊力やばすぎ💪🔥",
+    "{category} | むき出しの筋肉美♡",
+    "{category} - じっとり汗ばむ筋肉✨",
+    "{category} | 絞り上げたこの身体🔥",
+    "{category} - 濡れツヤ筋肉の魅力♡",
+    "{category} | 無防備なマッスルボディ💪",
+    "{category} - 詰め込まれた筋肉美✨",
 ]
 
 # --- カテゴリ名テンプレート ---
@@ -92,6 +100,10 @@ CATEGORY_TEMPLATES = [
     "筋肉女子フォトギャラリー", "美しき筋肉の世界", "フィットネスガール",
     "マッスルアート", "筋肉美の極致", "ストロングビューティー",
     "ワークアウトビューティー", "鍛え抜いた美ボディ", "パワフルビューティー",
+    "むちむちマッスル", "褐色筋肉美女", "むき出しの肉体美",
+    "汗ばむ筋肉女子", "絞り上げボディ", "濡れツヤマッスル",
+    "無防備マッスルガール", "バキバキ女子", "褐色ボリュームボディ",
+    "じっとり筋肉美", "詰め込みマッスル",
 ]
 
 # --- 本文HTMLテンプレート ---
@@ -102,7 +114,7 @@ BODY_TEMPLATES = [
 <p>{description}</p>
 <p style="margin-top:20px;">{hashtags}</p>
 <hr />
-<p style="font-size:1.2em;"><a href="{patreon_link}" target="_blank"><strong>もっと見たい方はPatreonへ → MuscleLove</strong></a></p>
+<p style="font-size:1.2em;">💪 <a href="{patreon_link}" target="_blank"><strong>もっと見たい？特別に見せてあげる♡ → MuscleLove</strong></a></p>
 </div>""",
     """<div style="text-align:center;">
 <p><img src="{image_url}" alt="{title}" style="max-width:100%;" /></p>
@@ -110,7 +122,7 @@ BODY_TEMPLATES = [
 <p>{description}</p>
 <p style="margin-top:20px;">{hashtags}</p>
 <hr />
-<p style="font-size:1.2em;"><a href="{patreon_link}" target="_blank"><strong>限定コンテンツはPatreonで公開中！</strong></a></p>
+<p style="font-size:1.2em;">🔥 <a href="{patreon_link}" target="_blank"><strong>この身体、気になるでしょ？限定コンテンツはPatreonで♡</strong></a></p>
 </div>""",
     """<div style="text-align:center;">
 <p><img src="{image_url}" alt="{title}" style="max-width:100%;" /></p>
@@ -118,21 +130,33 @@ BODY_TEMPLATES = [
 <p>{description}</p>
 <p style="margin-top:20px;">{hashtags}</p>
 <hr />
-<p style="font-size:1.2em;"><a href="{patreon_link}" target="_blank"><strong>Patreonで限定写真・動画を配信中！</strong></a></p>
+<p style="font-size:1.2em;">✨ <a href="{patreon_link}" target="_blank"><strong>ここでしか見れない筋肉美、Patreonで公開中💪🔥</strong></a></p>
 <p><a href="{patreon_link}" target="_blank">{patreon_link}</a></p>
+</div>""",
+    """<div style="text-align:center;">
+<p><img src="{image_url}" alt="{title}" style="max-width:100%;" /></p>
+<p style="font-size:1.1em;"><strong>{title}</strong></p>
+<p>{description}</p>
+<p style="margin-top:20px;">{hashtags}</p>
+<hr />
+<p style="font-size:1.2em;">♡ <a href="{patreon_link}" target="_blank"><strong>むき出しの筋肉美、全部見せてあげる → Patreon</strong></a></p>
 </div>""",
 ]
 
 # --- 説明文テンプレート ---
 DESCRIPTION_TEMPLATES = [
-    "筋肉美の極み。鍛え上げられた肉体の美しさをご覧ください。",
-    "強さと美しさを兼ね備えた筋肉女子の魅力をお届けします。",
-    "MuscleLoveが厳選した筋肉美の世界。フィットネスの素晴らしさを感じてください。",
-    "鍛え上げた身体は芸術。筋肉女子たちの美しいボディをお楽しみください。",
-    "フィットネスは人生を変える。美しく鍛え上げられた身体の魅力。",
-    "ハードなトレーニングが生み出す美しいボディライン。筋肉の芸術をどうぞ。",
-    "努力の結晶、鍛え抜かれた筋肉美。最高のフィットネスボディを紹介します。",
-    "筋肉女子の魅力を毎日お届け。強く美しい身体は努力の証です。",
+    "筋肉質の女がエロい。鍛え上がった身体、見せてあげる♡💪",
+    "じっとり汗ばむ褐色の筋肉美。この破壊力、やばくない？🔥",
+    "むき出しの筋肉、絞り上げたボディライン。目が離せないでしょ？✨",
+    "むちむちボリューム×バキバキ筋肉。この組み合わせ、最強すぎる💪🔥",
+    "濡れツヤの肌に浮かぶ筋肉の陰影。鍛え抜かれた身体は芸術♡",
+    "無防備なマッスルボディ、特別に見せてあげる。Patreonで待ってるよ✨",
+    "褐色×筋肉×ボリューム体型。神評価の仕上がり、見逃さないで💪",
+    "詰め込まれた筋肉美。この身体に釘付けになるはず🔥♡",
+    "仕上がりえぐい筋肉女子。鍛え上がった肉体美をどうぞ✨",
+    "今日もバキバキに仕上がった筋肉美。この身体、気になるでしょ？💪",
+    "絞り上げたボディから溢れるパワー。強く美しい筋肉の世界🔥",
+    "じっとり光る筋肉、むき出しの美しさ。全部見せてあげる♡✨",
 ]
 
 
