@@ -336,17 +336,26 @@ def create_blog_post(title, content_html, categories):
     print(f"ドメイン末尾: ...{HATENA_BLOG_DOMAIN[-15:]}")
     print(f"API_KEY長さ: {len(HATENA_API_KEY)}")
 
-    # まずGETでエンドポイント確認
-    print("GETでエンドポイント確認中...")
+    # ブログの存在確認（認証なし）
+    blog_url = f"https://{HATENA_BLOG_DOMAIN}/"
+    print(f"ブログURL確認中: {blog_url}")
+    try:
+        blog_check = requests.get(blog_url, timeout=10, allow_redirects=True)
+        print(f"ブログHTTPステータス: {blog_check.status_code}")
+        print(f"最終URL: {blog_check.url}")
+    except Exception as e:
+        print(f"ブログ確認エラー: {e}")
+
+    # GETでAtomPubエンドポイント確認
+    print("GETでAtomPubエンドポイント確認中...")
     get_resp = requests.get(endpoint, headers=get_auth_headers())
-    print(f"GET結果: {get_resp.status_code}")
-    if get_resp.status_code != 200:
-        print(f"GETレスポンス: {get_resp.text[:300]}")
-        # Basic認証でGET
-        get_resp2 = requests.get(endpoint, auth=(HATENA_ID, HATENA_API_KEY))
-        print(f"GET(Basic)結果: {get_resp2.status_code}")
-        if get_resp2.status_code != 200:
-            print(f"GET(Basic)レスポンス: {get_resp2.text[:300]}")
+    print(f"GET(WSSE)結果: {get_resp.status_code}")
+    get_resp2 = requests.get(endpoint, auth=(HATENA_ID, HATENA_API_KEY))
+    print(f"GET(Basic)結果: {get_resp2.status_code}")
+    if get_resp2.status_code == 200:
+        print(f"GET成功! 記事一覧取得OK")
+    else:
+        print(f"GETレスポンスヘッダー: {dict(get_resp2.headers)}")
 
     # まずWSSE認証で試行
     resp = requests.post(endpoint, headers=headers, data=xml_body.encode('utf-8'))
