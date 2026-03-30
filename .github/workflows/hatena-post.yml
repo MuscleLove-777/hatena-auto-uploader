@@ -3,10 +3,8 @@ name: Hatena Blog Auto Post
 
 on:
   schedule:
-    # 1日3回投稿: 8:30 JST, 13:30 JST, 21:30 JST
-    - cron: '30 23 * * *'   # 8:30 JST (23:30 UTC前日)
-    - cron: '30 4 * * *'    # 13:30 JST (04:30 UTC)
-    - cron: '30 12 * * *'   # 21:30 JST (12:30 UTC)
+    # 毎日 JST 12:00 (UTC 3:00)
+    - cron: '0 3 * * *'
   workflow_dispatch:
 
 permissions:
