@@ -26,9 +26,38 @@ HATENA_API_KEY = os.environ.get("HATENA_API_KEY", "")
 HATENA_BLOG_DOMAIN = os.environ.get("HATENA_BLOG_DOMAIN", "")
 GDRIVE_FOLDER_ID = os.environ.get("GDRIVE_FOLDER_ID_HATENA", "")
 
-PATREON_LINK = "https://www.patreon.com/cw/MuscleLove"
+PATREON_LINK = "https://www.patreon.com/cw/MuscleLove?utm_source=hatena"
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
 UPLOADED_LOG = "uploaded_hatena.json"
+
+# --- MuscleLove バックリンクプール（一般プラットフォーム配慮：フィットネス系のみ） ---
+ML_BACKLINK_POOL_FITNESS = [
+    ("https://musclelove-777.github.io/muscle-meal-girls/", "筋肉女子のマッスルメシ"),
+    ("https://musclelove-777.github.io/runners-lab/", "ランナーラボ"),
+    ("https://musclelove-777.github.io/armwrestling-girls-navi/", "腕相撲女子ナビ"),
+    ("https://musclelove-777.github.io/physique-girls-navi/", "フィジーク女子ナビ"),
+    ("https://musclelove-777.github.io/fighting-girls-navi/", "格闘技女子ナビ"),
+    ("https://musclelove-777.github.io/joshi-prowrestling-navi/", "女子プロレスナビ"),
+    ("https://musclelove-777.github.io/female-physique-queens/", "Female Physique Queens"),
+    ("https://musclelove-777.github.io/network/fitness/", "Fitness Network 15サイト"),
+    ("https://musclelove-777.github.io/network/academy/", "MuscleLove Academy 77"),
+]
+
+
+def build_backlink_block():
+    """MuscleLoveバックリンクHTMLブロック（ランダム3件、冪等マーカー付き）"""
+    try:
+        k = min(3, len(ML_BACKLINK_POOL_FITNESS))
+        selected = random.sample(ML_BACKLINK_POOL_FITNESS, k=k)
+        items = " | ".join([f'<a href="{u}" target="_blank" rel="noopener">{n}</a>' for u, n in selected])
+        return (
+            "\n<br/><br/>\n"
+            "<!-- ML_BACKLINK -->\n"
+            f'<small style="color:#888;">💡 関連サイト：{items}</small>\n'
+            "<!-- /ML_BACKLINK -->\n"
+        )
+    except Exception:
+        return ""
 
 # --- WSSE認証ヘッダー生成 ---
 def wsse_header(username, api_key):
@@ -464,6 +493,9 @@ def main():
             hashtags=hashtags,
             patreon_link=PATREON_LINK,
         )
+
+    # MuscleLoveバックリンク埋込
+    content_html = content_html.rstrip() + build_backlink_block()
 
     # 3. ブログ記事投稿
     result = create_blog_post(title, content_html, tags)
