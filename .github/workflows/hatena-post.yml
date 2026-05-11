@@ -23,6 +23,7 @@ jobs:
       CONTEXT_SOURCE_DIRS: ${{ vars.CONTEXT_SOURCE_DIRS }}
       CONTEXT_MAX_FILES: ${{ vars.CONTEXT_MAX_FILES }}
       CONTEXT_MAX_CHARS: ${{ vars.CONTEXT_MAX_CHARS }}
+      PROFILE_LINK: ${{ vars.PROFILE_LINK }}
 
     steps:
       - name: Checkout repository

@@ -28,7 +28,7 @@ HATENA_API_KEY = os.environ.get("HATENA_API_KEY", "")
 HATENA_BLOG_DOMAIN = os.environ.get("HATENA_BLOG_DOMAIN", "")
 GDRIVE_FOLDER_ID = os.environ.get("GDRIVE_FOLDER_ID_HATENA", "")
 
-PATREON_LINK = "https://www.patreon.com/c/MuscleLove?utm_source=hatena"
+PROFILE_LINK = os.environ.get("PROFILE_LINK", "").strip()
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
 UPLOADED_LOG = "uploaded_hatena.json"
 CONTEXT_FILE_EXTENSIONS = {".md", ".txt", ".json"}
@@ -52,34 +52,16 @@ CONTEXT_SOURCE_DIRS = [
     if p.strip()
 ]
 
-# --- MuscleLove バックリンクプール（一般プラットフォーム配慮：フィットネス系のみ） ---
-ML_BACKLINK_POOL_FITNESS = [
-    ("https://musclelove-777.github.io/muscle-meal-girls/", "筋肉女子のマッスルメシ"),
-    ("https://musclelove-777.github.io/runners-lab/", "ランナーラボ"),
-    ("https://musclelove-777.github.io/armwrestling-girls-navi/", "腕相撲女子ナビ"),
-    ("https://musclelove-777.github.io/physique-girls-navi/", "フィジーク女子ナビ"),
-    ("https://musclelove-777.github.io/fighting-girls-navi/", "格闘技女子ナビ"),
-    ("https://musclelove-777.github.io/joshi-prowrestling-navi/", "女子プロレスナビ"),
-    ("https://musclelove-777.github.io/female-physique-queens/", "Female Physique Queens"),
-    ("https://musclelove-777.github.io/network/fitness/", "Fitness Network 15サイト"),
-    ("https://musclelove-777.github.io/network/academy/", "MuscleLove Academy 77"),
-]
-
-
-def build_backlink_block():
-    """MuscleLoveバックリンクHTMLブロック（ランダム3件、冪等マーカー付き）"""
-    try:
-        k = min(3, len(ML_BACKLINK_POOL_FITNESS))
-        selected = random.sample(ML_BACKLINK_POOL_FITNESS, k=k)
-        items = " | ".join([f'<a href="{u}" target="_blank" rel="noopener">{n}</a>' for u, n in selected])
-        return (
-            "\n<br/><br/>\n"
-            "<!-- ML_BACKLINK -->\n"
-            f'<small style="color:#888;">💡 関連サイト：{items}</small>\n'
-            "<!-- /ML_BACKLINK -->\n"
-        )
-    except Exception:
+def build_profile_link_block():
+    """任意のプロフィール/活動リンクを本文末に添える"""
+    if not PROFILE_LINK:
         return ""
+    return (
+        "\n<p style=\"text-align:center;font-size:0.95em;\">"
+        f'<a href="{PROFILE_LINK}" target="_blank" rel="noopener">プロフィール/活動リンクはこちら</a>'
+        "</p>\n"
+    )
+
 
 # --- WSSE認証ヘッダー生成 ---
 def wsse_header(username, api_key):
@@ -103,65 +85,60 @@ def get_auth_headers():
 
 # --- タグマッピング ---
 CONTENT_TAG_MAP = {
-    'training': ['筋トレ', 'ワークアウト', 'トレーニング', 'ジム', 'フィットネス'],
-    'workout': ['筋トレ', 'ワークアウト', 'トレーニング', 'ジム', 'フィットネス'],
-    'pullups': ['懸垂', 'プルアップ', '背中トレ', '自重トレーニング'],
-    'posing': ['ポージング', 'ボディビル', 'フィジーク'],
-    'flex': ['フレックス', '筋肉', 'ボディビル'],
-    'muscle': ['筋肉', 'マッスル', 'フィットネス'],
-    'bicep': ['上腕二頭筋', '腕トレ', 'バイセップス'],
-    'abs': ['腹筋', 'シックスパック', '体幹'],
-    'leg': ['脚トレ', 'レッグデイ', 'スクワット'],
-    'back': ['背中', '広背筋', '背中トレ'],
-    'squat': ['スクワット', '脚トレ', 'レッグデイ'],
-    'deadlift': ['デッドリフト', 'パワーリフティング'],
-    'bench': ['ベンチプレス', '胸トレ'],
-    'bikini': ['ビキニ', 'ビキニフィットネス', 'フィギュア'],
-    'competition': ['大会', 'コンテスト', 'ボディビル'],
+    'ai': ['AI', '制作メモ', '気になったこと'],
+    'blog': ['ブログ運営', '制作メモ', '雑記'],
+    'work': ['作業ログ', '日常', '近況メモ'],
+    'daily': ['日常', '雑記', '個人ブログ'],
+    'life': ['暮らし', '日常', '雑記'],
+    'memo': ['メモ', '近況メモ', '雑記'],
+    'trend': ['話題メモ', '気になったこと', '雑記'],
+    'news': ['話題メモ', '気になったこと', '雑記'],
+    'sns': ['SNS', '話題メモ', '近況メモ'],
+    'game': ['ゲーム', '趣味', '雑記'],
+    'gaming': ['ゲーム', '趣味', '雑記'],
+    'steam': ['PCゲーム', 'ゲーム', '趣味'],
+    'switch': ['Nintendo Switch', 'ゲーム', '趣味'],
+    'ps5': ['PS5', 'ゲーム', '趣味'],
+    'mahjong': ['麻雀', '趣味', '雑記'],
+    'majang': ['麻雀', '趣味', '雑記'],
+    'mj': ['麻雀', '趣味', '雑記'],
+    'anime': ['アニメ', '雑談', '趣味'],
+    'manga': ['漫画', '雑談', '趣味'],
+    'music': ['音楽', '雑談', '趣味'],
+    'movie': ['映画', '雑談', '趣味'],
+    'food': ['食べ物', '日常', '雑記'],
+    'health': ['体調管理', '暮らし', '日常'],
+    'travel': ['外出メモ', '暮らし', '雑記'],
+    'context': ['近況メモ', '雑記', '個人ブログ'],
 }
 
 BASE_TAGS = [
-    '筋肉女子', '筋トレ女子', 'フィットネス', 'マッスルガール',
-    'ボディビル', 'ジム', 'ワークアウト', 'MuscleLove',
-    'ワキフェチ', '腕フェチ', '筋肉美', 'AI美女', 'むちむち', '褐色美女',
+    '雑記ブログ', '日常', '個人ブログ', '近況メモ',
+    '気になったこと', '暮らし', '趣味', '雑談',
 ]
 
 # --- タイトルテンプレート ---
 TITLE_TEMPLATES = [
-    "{category} | 凛花が魅せる筋肉の芸術💪",
-    "{category} - カイの背中、今日も鬼仕上がり🔥",
-    "{category} | ましろの柔肌×鋼の筋肉♡",
-    "MuscleLove | {category}が止まらない✨",
-    "{category} - 紫苑の本気トレ、覗いちゃう？🔥",
-    "{category} | 脱いだら凄かった…💪♡",
-    "アヤネ流{category}、これが答え✨",
-    "{category} - 1日3分で変わる？嘘でしょ…🔥",
-    "{category} | もう戻れない筋肉沼💪",
-    "{category} - 「え、触っていい？」って聞かれた話♡",
-    "MuscleLove厳選 | {category}ハイライト🔥",
-    "{category} - 凛花のワークアウト日記✨",
-    "{category} | 褐色肌に映える汗の雫💪♡",
-    "話題沸騰！{category}がSNSで大バズり🔥",
-    "{category} - ましろ、限界突破しました✨",
-    "{category} | ジムで二度見された筋肉美♡",
-    "カイの{category}記録 | 進化が止まらない💪",
-    "{category} - この腹筋、何パックか数えてみて🔥",
-    "{category} | 紫苑の秘密のトレーニングルーム✨",
-    "{category} - ボディラインが物語る努力の結晶♡💪",
+    "{category} | 今日の雑記メモ",
+    "{category} - 最近ちょっと気になっている話",
+    "{category} | 雑談しながら近況整理",
+    "{category} - 日常のコンテキスト拾い読み",
+    "{category} | 好きなものと気になる話",
+    "{category} - その日の流れで書くメモ",
+    "{category} | 生活ログから見えたこと",
+    "{category} - いろんなテーマを少しずつ",
+    "{category} | 今日の関心ごとまとめ",
+    "{category} - こういう話がしたかった",
+    "{category} | なんとなく残しておきたい話",
+    "{category} - 日常、趣味、作業のあいだ",
 ]
 
 # --- カテゴリ名テンプレート ---
 CATEGORY_TEMPLATES = [
-    "筋肉美ギャラリー", "フィットネスの美学", "マッスルビューティー",
-    "鍛え上げた肉体美", "筋トレ女子コレクション", "ボディビル女子の魅力",
-    "フィットネスガール", "マッスルアート", "ストロングビューティー",
-    "ワークアウトビューティー", "パワフルビューティー", "褐色筋肉美女",
-    "バキバキ女子", "褐色ボリュームボディ", "アイアンレディ",
-    "筋肉の彫刻美", "汗と努力のカタチ", "ダイヤモンドボディ",
-    "鋼鉄ガールズ", "マッスルクイーン", "フレックス女子",
-    "背中で語る女", "パンプアップ美学", "ビースト系美女",
-    "黄金比ボディ", "筋トレ女神", "限界突破ガール",
-    "アスリートビューティー", "チカラの美", "トレーニーの誇り",
+    "雑記ブログ", "日常メモ", "近況雑談",
+    "好きなものログ", "話題メモ", "今日のメモ",
+    "趣味の話", "コンテキスト整理", "ゆるい日記",
+    "気になる話", "生活ログ", "作業と日常",
 ]
 
 # --- 本文HTMLテンプレート ---
@@ -172,7 +149,7 @@ BODY_TEMPLATES = [
 <p>{description}</p>
 <p style="margin-top:20px;">{hashtags}</p>
 <hr />
-<p style="font-size:1.2em;">💪 <a href="{patreon_link}" target="_blank"><strong>もっと見たい？特別に見せてあげる♡ → MuscleLove</strong></a></p>
+<p>日常のコンテキストから拾ったテーマを、雑記ブログとしてゆるく残していきます。</p>
 </div>""",
     """<div style="text-align:center;">
 <p><img src="{image_url}" alt="{title}" style="max-width:100%;" /></p>
@@ -180,7 +157,7 @@ BODY_TEMPLATES = [
 <p>{description}</p>
 <p style="margin-top:20px;">{hashtags}</p>
 <hr />
-<p style="font-size:1.2em;">🔥 <a href="{patreon_link}" target="_blank"><strong>この身体、気になるでしょ？限定コンテンツはPatreonで♡</strong></a></p>
+<p>特定ジャンルに寄せすぎず、その日に気になったことを適当に拾っていく場所です。</p>
 </div>""",
     """<div style="text-align:center;">
 <p><img src="{image_url}" alt="{title}" style="max-width:100%;" /></p>
@@ -188,8 +165,7 @@ BODY_TEMPLATES = [
 <p>{description}</p>
 <p style="margin-top:20px;">{hashtags}</p>
 <hr />
-<p style="font-size:1.2em;">✨ <a href="{patreon_link}" target="_blank"><strong>ここでしか見れない筋肉美、Patreonで公開中💪🔥</strong></a></p>
-<p><a href="{patreon_link}" target="_blank">{patreon_link}</a></p>
+<p>趣味、作業、流行りもの、生活の小ネタをその日の流れで少しずつ。</p>
 </div>""",
     """<div style="text-align:center;">
 <p><img src="{image_url}" alt="{title}" style="max-width:100%;" /></p>
@@ -197,34 +173,44 @@ BODY_TEMPLATES = [
 <p>{description}</p>
 <p style="margin-top:20px;">{hashtags}</p>
 <hr />
-<p style="font-size:1.2em;">♡ <a href="{patreon_link}" target="_blank"><strong>むき出しの筋肉美、全部見せてあげる → Patreon</strong></a></p>
+<p>今日の自分の興味を、あとから読み返せる形でメモしておきます。</p>
 </div>""",
 ]
 
 # --- 説明文テンプレート ---
 DESCRIPTION_TEMPLATES = [
-    "凛花が朝イチでパンプさせた腕、近くで見る？ぷりっぷりだよ💪♡",
-    "カイのデッドリフト200kg達成記念。背中の厚み、ちょっとおかしいｗ🔥",
-    "ましろの太もも、触ったら硬すぎて驚く人続出らしい。試してみる？✨",
-    "汗が滴る褐色肌、浮き出る血管。これが毎日の努力の答え💪🔥",
-    "紫苑が減量期ラスト1週間。絞り切ったウエスト、芸術品でしかない♡",
-    "ジムのミラー越しに撮った1枚。ライティングが完璧すぎて震えた✨",
-    "アヤネのポージング練習風景。さりげないフレックスが一番かっこいい💪",
-    "休息日のリラックスショット。力抜いてても筋肉は嘘つかない🔥♡",
-    "増量期のむちむちボディも、減量期のキレキレも、どっちも最高でしょ✨",
-    "「筋トレ始めたきっかけは？」→この写真見せれば一発で伝わる💪🔥",
-    "夜トレ後の1枚。薄暗いジムで浮かび上がる筋肉のシルエットがエモい♡",
-    "三角筋のカット、広背筋の広がり。細部に宿る鍛錬の美しさ✨",
-    "「強い女が好き」って人、ここに集合。期待を裏切らない仕上がり💪♡",
-    "凛花とましろのツーショット。パワーの化学反応がすごすぎる🔥✨",
-    "週6トレーニングの成果、写真で全部見せます。覚悟して💪🔥♡",
+    "今日は手元のコンテキストから、気になった話を雑記っぽく拾っておきます。",
+    "人気の話題を追いながら、自分ならどこに引っかかるかをメモする回です。",
+    "深い考察というより、日常の中で引っかかったことを軽く並べる感じです。",
+    "趣味の話、作業の話、生活の小ネタをその日の気分でまとめます。",
+    "最近の関心ごとを、あとで読み返して笑えるくらいの温度でまとめます。",
+    "制作の合間に見ていた話題から、個人的に残しておきたいところだけ拾いました。",
+    "今日は少し雑談寄り。日常、趣味、流行りものを混ぜて近況整理です。",
+    "こういう小さな趣味のログが、意外とあとからプロフィール代わりになります。",
+    "テーマは固定せず、その日のコンテキストから自然に出てきたものを拾います。",
+    "がっつり解説ではなく、日常と趣味の間にある話を軽く書いています。",
 ]
 
 STOP_WORDS = {
     "https", "http", "www", "com", "note", "with", "from", "that", "this",
     "する", "して", "ある", "ない", "よう", "ため", "こと", "もの", "また", "です",
     "ます", "から", "まで", "など", "より", "れる", "られ", "できる", "いる",
+    "github", "token", "secret", "password", "api", "apikey", "key", "env", "json",
 }
+
+SENSITIVE_KEYWORD_PATTERNS = [
+    re.compile(r"^[a-f0-9]{16,}$"),
+    re.compile(r"^[A-Za-z0-9_\-]{24,}$"),
+    re.compile(r"(secret|token|password|apikey|api_key|credential|cookie)", re.I),
+]
+
+SENSITIVE_CONTEXT_PATTERNS = [
+    re.compile(
+        r"(secret|token|password|api[_-]?key|credential|cookie)"
+        r"\s*[:=]?\s*[A-Za-z0-9_\-./+=]{3,}",
+        re.I,
+    ),
+]
 
 
 def collect_context_snippets():
@@ -260,24 +246,30 @@ def collect_context_snippets():
 
 def extract_context_keywords(context_text):
     """コンテキストから頻出キーワードを抽出"""
-    tokens = re.findall(r"[A-Za-z0-9_]{3,}|[ぁ-んァ-ヶ一-龥]{2,}", context_text.lower())
-    words = [t for t in tokens if t not in STOP_WORDS and not t.isdigit()]
+    safe_context_text = context_text
+    for pattern in SENSITIVE_CONTEXT_PATTERNS:
+        safe_context_text = pattern.sub(" ", safe_context_text)
+    tokens = re.findall(r"[A-Za-z0-9_]{3,}|[ぁ-んァ-ヶ一-龥]{2,}", safe_context_text.lower())
+    words = [
+        t for t in tokens
+        if t not in STOP_WORDS
+        and not t.isdigit()
+        and not any(pattern.search(t) for pattern in SENSITIVE_KEYWORD_PATTERNS)
+    ]
     ranked = [w for w, _ in Counter(words).most_common(8)]
     return ranked
 
 
-def build_context_block(snippets):
-    """本文に入れるコンテキスト要約HTMLを作成"""
+def build_context_block(snippets, keywords):
+    """本文に入れる公開向けコンテキストHTMLを作成"""
     if not snippets:
-        return "<p>本日の分析ログ: コンテキストを収集中です。次回更新で反映されます。</p>"
-    lines = []
-    for s in snippets[:3]:
-        preview = s["text"][:120]
-        lines.append(f"<li><strong>{s['path']}</strong>: {preview}...</li>")
+        return "<p>今日の文脈メモ: 日常、趣味、作業、気になる話題を少しずつ整理中です。</p>"
+    keyword_items = "".join([f"<li>{kw}</li>" for kw in keywords[:5]]) or "<li>日常</li><li>趣味</li><li>雑記</li>"
     return (
         "<div style='text-align:left;max-width:760px;margin:0 auto;'>"
-        "<h3>本日の文脈メモ</h3>"
-        "<ul>" + "".join(lines) + "</ul>"
+        "<h3>今日拾った文脈</h3>"
+        "<p>手元のメモから、公開しても自然な関心テーマだけを拾っています。</p>"
+        "<ul>" + keyword_items + "</ul>"
         "</div>"
     )
 
@@ -297,16 +289,16 @@ def ensure_generated_image(keywords):
     draw.rectangle([(0, 0), (width, 20)], fill=accent)
     draw.rectangle([(0, height - 20), (width, height)], fill=accent)
 
-    title = "MuscleLove Context Update"
+    title = "Daily Zakkiblog Notes"
     ts = datetime.now(JST).strftime("%Y-%m-%d %H:%M JST")
-    kw_text = ", ".join(keywords[:6]) if keywords else "context automation"
+    kw_text = ", ".join(keywords[:6]) if keywords else "daily notes, hobbies, topics"
     lines = [
         title,
         "",
         f"generated: {ts}",
         f"keywords: {kw_text}",
         "",
-        "auto-created by hatena uploader fallback",
+        "auto-created by hatena uploader",
     ]
     y = 110
     for line in lines:
@@ -378,9 +370,10 @@ def download_images_from_gdrive():
 def get_content_tags(filename):
     """ファイル名からコンテンツに適したタグを推定"""
     fname_lower = filename.lower()
+    fname_tokens = set(re.split(r"[^a-z0-9]+", fname_lower))
     tags = list(BASE_TAGS)
     for keyword, keyword_tags in CONTENT_TAG_MAP.items():
-        if keyword in fname_lower:
+        if (len(keyword) <= 3 and keyword in fname_tokens) or (len(keyword) > 3 and keyword in fname_lower):
             for t in keyword_tags:
                 if t not in tags:
                     tags.append(t)
@@ -606,7 +599,6 @@ def main():
             title=title,
             description=description,
             hashtags=hashtags,
-            patreon_link=PATREON_LINK,
         )
         # image_urlのプレースホルダーを置換
         content_html = content_html.replace(
@@ -619,12 +611,16 @@ def main():
             title=title,
             description=description,
             hashtags=hashtags,
-            patreon_link=PATREON_LINK,
         )
 
-    # MuscleLoveバックリンク埋込
-    context_block = build_context_block(snippets)
-    content_html = content_html.rstrip() + "\n" + context_block + build_backlink_block()
+    # 個人文脈メモ + 任意プロフィールリンク
+    context_block = build_context_block(snippets, context_keywords)
+    content_html = (
+        content_html.rstrip()
+        + "\n"
+        + context_block
+        + build_profile_link_block()
+    )
 
     # 3. ブログ記事投稿
     result = create_blog_post(title, content_html, tags)
