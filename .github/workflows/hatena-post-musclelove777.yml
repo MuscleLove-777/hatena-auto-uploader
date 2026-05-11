@@ -1,0 +1,117 @@
+name: Hatena Blog Auto Post (musclelove777)
+# Auto-uploader for Hatena Blog via AtomPub API
+
+on:
+  schedule:
+    # 毎日 JST 12:10 (UTC 3:10)
+    - cron: '10 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+
+    env:
+      HATENA_ID: ${{ secrets.HATENA_ID_MUSCLELOVE777 }}
+      HATENA_API_KEY: ${{ secrets.HATENA_API_KEY_MUSCLELOVE777 }}
+      HATENA_BLOG_DOMAIN: ${{ secrets.HATENA_BLOG_DOMAIN_MUSCLELOVE777 }}
+      GDRIVE_FOLDER_ID_HATENA: ${{ secrets.GDRIVE_FOLDER_ID_HATENA_MUSCLELOVE777 }}
+      CONTEXT_SOURCE_DIRS: ${{ vars.CONTEXT_SOURCE_DIRS }}
+      CONTEXT_MAX_FILES: ${{ vars.CONTEXT_MAX_FILES }}
+      CONTEXT_MAX_CHARS: ${{ vars.CONTEXT_MAX_CHARS }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run upload script (attempt 1)
+        id: attempt1
+        continue-on-error: true
+        run: python upload.py
+
+      - name: Wait before retry
+        if: steps.attempt1.outcome == 'failure'
+        run: echo "1回目失敗。60秒待ってリトライ..." && sleep 60
+
+      - name: Run upload script (attempt 2)
+        id: attempt2
+        if: steps.attempt1.outcome == 'failure'
+        continue-on-error: true
+        run: python upload.py
+
+      - name: Wait before retry 2
+        if: steps.attempt1.outcome == 'failure' && steps.attempt2.outcome == 'failure'
+        run: echo "2回目失敗。120秒待ってリトライ..." && sleep 120
+
+      - name: Run upload script (attempt 3 - final)
+        id: attempt3
+        if: steps.attempt1.outcome == 'failure' && steps.attempt2.outcome == 'failure'
+        run: python upload.py
+
+      - name: Commit upload log
+        if: steps.attempt1.outcome == 'success' || steps.attempt2.outcome == 'success' || steps.attempt3.outcome == 'success'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add uploaded_hatena.json
+          git diff --cached --quiet || git commit -m "Update uploaded_hatena.json [skip ci]"
+          git push
+
+      - name: LINE notify on failure
+        if: steps.attempt1.outcome == 'failure' && (steps.attempt2.outcome == 'failure' || steps.attempt2.outcome == 'skipped') && (steps.attempt3.outcome == 'failure' || steps.attempt3.outcome == 'skipped')
+        env:
+          LINE_CHANNEL_TOKEN: ${{ secrets.LINE_CHANNEL_TOKEN_MUSCLELOVE777 }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID_MUSCLELOVE777 }}
+        run: |
+          if [ -z "${LINE_CHANNEL_TOKEN}" ] || [ -z "${LINE_USER_ID}" ]; then
+            echo "LINE secrets are not set. Skip LINE failure notify."
+            exit 0
+          fi
+          curl -s -X POST https://api.line.me/v2/bot/message/push \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${LINE_CHANNEL_TOKEN}" \
+            -d "{
+              \"to\": \"${LINE_USER_ID}\",
+              \"messages\": [{
+                \"type\": \"text\",
+                \"text\": \"⚠️ はてなブログ自動投稿(musclelove777)が3回リトライしても失敗しました\n\n時刻: $(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M JST')\nリポジトリ: ${{ github.repository }}\nログ: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+              }]
+            }"
+
+      - name: LINE notify on success
+        if: steps.attempt1.outcome == 'success' || steps.attempt2.outcome == 'success' || steps.attempt3.outcome == 'success'
+        env:
+          LINE_CHANNEL_TOKEN: ${{ secrets.LINE_CHANNEL_TOKEN_MUSCLELOVE777 }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID_MUSCLELOVE777 }}
+        run: |
+          if [ -z "${LINE_CHANNEL_TOKEN}" ] || [ -z "${LINE_USER_ID}" ]; then
+            echo "LINE secrets are not set. Skip LINE success notify."
+            exit 0
+          fi
+          RETRY_INFO=""
+          if [ "${{ steps.attempt2.outcome }}" = "success" ]; then
+            RETRY_INFO="（2回目で成功）"
+          elif [ "${{ steps.attempt3.outcome }}" = "success" ]; then
+            RETRY_INFO="（3回目で成功）"
+          fi
+          curl -s -X POST https://api.line.me/v2/bot/message/push \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${LINE_CHANNEL_TOKEN}" \
+            -d "{
+              \"to\": \"${LINE_USER_ID}\",
+              \"messages\": [{
+                \"type\": \"text\",
+                \"text\": \"✅ はてなブログ自動投稿(musclelove777) 成功${RETRY_INFO}\n時刻: $(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M JST')\"
+              }]
+            }"
