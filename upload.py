@@ -10,6 +10,7 @@ import os
 import random
 import hashlib
 import base64
+from collections import Counter
 from datetime import datetime, timezone, timedelta
 
 import re
@@ -17,6 +18,7 @@ import xml.etree.ElementTree as ET
 
 import requests
 import gdown
+from PIL import Image, ImageDraw
 
 JST = timezone(timedelta(hours=9))
 
@@ -26,9 +28,29 @@ HATENA_API_KEY = os.environ.get("HATENA_API_KEY", "")
 HATENA_BLOG_DOMAIN = os.environ.get("HATENA_BLOG_DOMAIN", "")
 GDRIVE_FOLDER_ID = os.environ.get("GDRIVE_FOLDER_ID_HATENA", "")
 
-PATREON_LINK = "https://www.patreon.com/cw/MuscleLove?utm_source=hatena"
+PATREON_LINK = "https://www.patreon.com/c/MuscleLove?utm_source=hatena"
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
 UPLOADED_LOG = "uploaded_hatena.json"
+CONTEXT_FILE_EXTENSIONS = {".md", ".txt", ".json"}
+def env_or_default(key, default):
+    """空文字を未設定扱いとしてデフォルトを返す"""
+    value = os.environ.get(key)
+    if value is None:
+        return default
+    value = value.strip()
+    return value if value else default
+
+
+CONTEXT_MAX_FILES = int(env_or_default("CONTEXT_MAX_FILES", "15"))
+CONTEXT_MAX_CHARS = int(env_or_default("CONTEXT_MAX_CHARS", "900"))
+CONTEXT_SOURCE_DIRS = [
+    p.strip()
+    for p in env_or_default(
+        "CONTEXT_SOURCE_DIRS",
+        "context,../../00_本部_オーケストレーター/80_コンテキスト倉庫,../../004_MuscleLove/dashboard/daily_ga4",
+    ).split(",")
+    if p.strip()
+]
 
 # --- MuscleLove バックリンクプール（一般プラットフォーム配慮：フィットネス系のみ） ---
 ML_BACKLINK_POOL_FITNESS = [
@@ -198,6 +220,103 @@ DESCRIPTION_TEMPLATES = [
     "週6トレーニングの成果、写真で全部見せます。覚悟して💪🔥♡",
 ]
 
+STOP_WORDS = {
+    "https", "http", "www", "com", "note", "with", "from", "that", "this",
+    "する", "して", "ある", "ない", "よう", "ため", "こと", "もの", "また", "です",
+    "ます", "から", "まで", "など", "より", "れる", "られ", "できる", "いる",
+}
+
+
+def collect_context_snippets():
+    """設定ディレクトリからコンテキスト文字列を収集"""
+    snippets = []
+    for source_dir in CONTEXT_SOURCE_DIRS:
+        if not os.path.isdir(source_dir):
+            continue
+        candidates = []
+        for root, _, filenames in os.walk(source_dir):
+            for fname in filenames:
+                ext = os.path.splitext(fname)[1].lower()
+                if ext in CONTEXT_FILE_EXTENSIONS:
+                    candidates.append(os.path.join(root, fname))
+        candidates.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+        for path in candidates[:CONTEXT_MAX_FILES]:
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    raw = f.read().strip()
+                if not raw:
+                    continue
+                clean = re.sub(r"\s+", " ", raw)
+                snippets.append(
+                    {
+                        "path": os.path.basename(path),
+                        "text": clean[:CONTEXT_MAX_CHARS],
+                    }
+                )
+            except Exception as e:
+                print(f"コンテキスト読込失敗: {path} ({e})")
+    return snippets
+
+
+def extract_context_keywords(context_text):
+    """コンテキストから頻出キーワードを抽出"""
+    tokens = re.findall(r"[A-Za-z0-9_]{3,}|[ぁ-んァ-ヶ一-龥]{2,}", context_text.lower())
+    words = [t for t in tokens if t not in STOP_WORDS and not t.isdigit()]
+    ranked = [w for w, _ in Counter(words).most_common(8)]
+    return ranked
+
+
+def build_context_block(snippets):
+    """本文に入れるコンテキスト要約HTMLを作成"""
+    if not snippets:
+        return "<p>本日の分析ログ: コンテキストを収集中です。次回更新で反映されます。</p>"
+    lines = []
+    for s in snippets[:3]:
+        preview = s["text"][:120]
+        lines.append(f"<li><strong>{s['path']}</strong>: {preview}...</li>")
+    return (
+        "<div style='text-align:left;max-width:760px;margin:0 auto;'>"
+        "<h3>本日の文脈メモ</h3>"
+        "<ul>" + "".join(lines) + "</ul>"
+        "</div>"
+    )
+
+
+def ensure_generated_image(keywords):
+    """入力画像がないときのフォールバック画像を生成"""
+    os.makedirs("images", exist_ok=True)
+    image_path = os.path.join("images", f"auto_context_{datetime.now(JST).strftime('%Y%m%d_%H%M%S')}.png")
+
+    width, height = 1200, 630
+    bg = (20, 24, 38)
+    accent = (240, 84, 84)
+    txt = (245, 245, 245)
+
+    image = Image.new("RGB", (width, height), bg)
+    draw = ImageDraw.Draw(image)
+    draw.rectangle([(0, 0), (width, 20)], fill=accent)
+    draw.rectangle([(0, height - 20), (width, height)], fill=accent)
+
+    title = "MuscleLove Context Update"
+    ts = datetime.now(JST).strftime("%Y-%m-%d %H:%M JST")
+    kw_text = ", ".join(keywords[:6]) if keywords else "context automation"
+    lines = [
+        title,
+        "",
+        f"generated: {ts}",
+        f"keywords: {kw_text}",
+        "",
+        "auto-created by hatena uploader fallback",
+    ]
+    y = 110
+    for line in lines:
+        draw.text((80, y), line, fill=txt)
+        y += 70 if line else 35
+
+    image.save(image_path, format="PNG")
+    print(f"フォールバック画像を生成: {image_path}")
+    return image_path
+
 
 def load_uploaded():
     """アップロード済みファイルリストを読み込む"""
@@ -229,7 +348,6 @@ def download_images_from_gdrive():
             url=url,
             output=output_dir,
             quiet=False,
-            remaining_ok=True,
         )
     except Exception as e:
         print(f"gdownダウンロードエラー: {e}")
@@ -433,11 +551,16 @@ def main():
         print("Error: HATENA_ID, HATENA_API_KEY, HATENA_BLOG_DOMAIN を設定してください。")
         sys.exit(1)
 
+    # 先にコンテキストを集める（画像フォールバックにも利用）
+    snippets = collect_context_snippets()
+    context_text = " ".join([s["text"] for s in snippets])
+    context_keywords = extract_context_keywords(context_text)
+
     # 画像ダウンロード
     image_files = download_images_from_gdrive()
     if not image_files:
-        print("Error: 画像ファイルが見つかりません。")
-        sys.exit(1)
+        print("入力画像が見つからないため、フォールバック画像を自動生成します。")
+        image_files = [ensure_generated_image(context_keywords)]
 
     # アップロード済みリスト読み込み
     uploaded = load_uploaded()
@@ -462,11 +585,16 @@ def main():
         print("Error: 画像アップロードに失敗しました。")
         sys.exit(1)
 
-    # 2. ブログ記事を生成
+    # 2. コンテキスト反映 + ブログ記事生成
     tags = get_content_tags(chosen_name)
+    for kw in context_keywords[:3]:
+        if kw not in tags:
+            tags.append(kw)
     category = random.choice(CATEGORY_TEMPLATES)
     title = random.choice(TITLE_TEMPLATES).format(category=category)
     description = random.choice(DESCRIPTION_TEMPLATES)
+    if context_keywords:
+        description += f" 今日の注目テーマ: {', '.join(context_keywords[:3])}。"
     hashtags = " ".join([f"#{t}" for t in tags[:8]])
 
     # 画像URLの処理（はてな記法の場合はHTMLに変換）
@@ -495,7 +623,8 @@ def main():
         )
 
     # MuscleLoveバックリンク埋込
-    content_html = content_html.rstrip() + build_backlink_block()
+    context_block = build_context_block(snippets)
+    content_html = content_html.rstrip() + "\n" + context_block + build_backlink_block()
 
     # 3. ブログ記事投稿
     result = create_blog_post(title, content_html, tags)

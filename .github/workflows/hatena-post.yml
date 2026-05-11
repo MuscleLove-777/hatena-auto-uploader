@@ -20,6 +20,9 @@ jobs:
       HATENA_API_KEY: ${{ secrets.HATENA_API_KEY }}
       HATENA_BLOG_DOMAIN: ${{ secrets.HATENA_BLOG_DOMAIN }}
       GDRIVE_FOLDER_ID_HATENA: ${{ secrets.GDRIVE_FOLDER_ID_HATENA }}
+      CONTEXT_SOURCE_DIRS: ${{ vars.CONTEXT_SOURCE_DIRS }}
+      CONTEXT_MAX_FILES: ${{ vars.CONTEXT_MAX_FILES }}
+      CONTEXT_MAX_CHARS: ${{ vars.CONTEXT_MAX_CHARS }}
 
     steps:
       - name: Checkout repository
