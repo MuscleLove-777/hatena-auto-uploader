@@ -32,6 +32,8 @@ PROFILE_LINK = os.environ.get("PROFILE_LINK", "").strip()
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
 UPLOADED_LOG = "uploaded_hatena.json"
 CONTEXT_FILE_EXTENSIONS = {".md", ".txt", ".json"}
+LOCAL_IMAGE_FILES = ["og.png"]
+LOCAL_IMAGE_DIRS = ["images"]
 def env_or_default(key, default):
     """空文字を未設定扱いとしてデフォルトを返す"""
     value = os.environ.get(key)
@@ -324,11 +326,34 @@ def save_uploaded(uploaded):
         json.dump(uploaded, f, ensure_ascii=False, indent=2)
 
 
+def scan_local_image_assets():
+    """Drive未設定時に使うリポジトリ内のMuscleLove画像を探す"""
+    image_files = []
+    for path in LOCAL_IMAGE_FILES:
+        if os.path.exists(path) and os.path.splitext(path)[1].lower() in IMAGE_EXTENSIONS:
+            image_files.append(path)
+
+    for output_dir in LOCAL_IMAGE_DIRS:
+        if not os.path.exists(output_dir):
+            continue
+        for root, _, filenames in os.walk(output_dir):
+            for fname in filenames:
+                if fname.startswith("auto_context_"):
+                    continue
+                fpath = os.path.join(root, fname)
+                ext = os.path.splitext(fname)[1].lower()
+                if ext in IMAGE_EXTENSIONS:
+                    image_files.append(fpath)
+
+    print(f"ローカルMuscleLove画像ファイル数: {len(image_files)}")
+    return image_files
+
+
 def download_images_from_gdrive():
     """Google Driveフォルダから画像一覧を取得してダウンロード"""
     if not GDRIVE_FOLDER_ID:
-        print("Error: GDRIVE_FOLDER_ID_HATENA が設定されていません。")
-        return []
+        print("GDRIVE_FOLDER_ID_HATENA が未設定のため、ローカルMuscleLove画像を使います。")
+        return scan_local_image_assets()
 
     url = f"https://drive.google.com/drive/folders/{GDRIVE_FOLDER_ID}"
     output_dir = "images"
@@ -362,6 +387,10 @@ def download_images_from_gdrive():
                 ext = os.path.splitext(fname)[1].lower()
                 if ext in IMAGE_EXTENSIONS:
                     image_files.append(fpath)
+
+    if not image_files:
+        print("Drive画像が見つからないため、ローカルMuscleLove画像に切り替えます。")
+        image_files = scan_local_image_assets()
 
     print(f"画像ファイル数: {len(image_files)}")
     return image_files
