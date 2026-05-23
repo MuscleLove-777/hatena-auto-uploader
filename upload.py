@@ -10,6 +10,7 @@ import os
 import random
 import hashlib
 import base64
+import html
 from collections import Counter
 from datetime import datetime, timezone, timedelta
 
@@ -29,6 +30,7 @@ HATENA_BLOG_DOMAIN = os.environ.get("HATENA_BLOG_DOMAIN", "")
 GDRIVE_FOLDER_ID = os.environ.get("GDRIVE_FOLDER_ID_HATENA", "")
 
 PROFILE_LINK = os.environ.get("PROFILE_LINK", "").strip()
+MANUAL_ARTICLE_PATH = os.environ.get("MANUAL_ARTICLE_PATH", "").strip()
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
 UPLOADED_LOG = "uploaded_hatena.json"
 CONTEXT_FILE_EXTENSIONS = {".md", ".txt", ".json"}
@@ -562,11 +564,135 @@ def create_blog_post(title, content_html, categories):
         return None
 
 
+def parse_manual_article(raw):
+    """Markdown/HTML fileからtitle/categories/bodyを取り出す"""
+    title = "MuscleLove テスト投稿"
+    categories = ["MuscleLove", "ブログ運営", "事業メモ"]
+    body = raw.strip()
+
+    if body.startswith("---"):
+        parts = body.split("---", 2)
+        if len(parts) == 3:
+            frontmatter = parts[1]
+            body = parts[2].strip()
+            parsed_categories = []
+            current_key = None
+            for line in frontmatter.splitlines():
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                if stripped.startswith("title:"):
+                    title = stripped.split(":", 1)[1].strip().strip('"').strip("'")
+                    current_key = "title"
+                elif stripped.startswith("categories:"):
+                    current_key = "categories"
+                elif current_key == "categories" and stripped.startswith("-"):
+                    cat = stripped[1:].strip().strip('"').strip("'")
+                    if cat:
+                        parsed_categories.append(cat)
+                else:
+                    current_key = None
+            if parsed_categories:
+                categories = parsed_categories
+
+    return title, categories, body
+
+
+def markdown_to_html(markdown_text):
+    """最小限のMarkdownをはてな投稿用HTMLへ変換する"""
+    html_lines = []
+    paragraph = []
+    list_items = []
+
+    def flush_paragraph():
+        nonlocal paragraph
+        if paragraph:
+            text = "<br />".join(html.escape(line) for line in paragraph)
+            html_lines.append(f"<p>{text}</p>")
+            paragraph = []
+
+    def flush_list():
+        nonlocal list_items
+        if list_items:
+            html_lines.append("<ul>")
+            for item in list_items:
+                html_lines.append(f"<li>{html.escape(item)}</li>")
+            html_lines.append("</ul>")
+            list_items = []
+
+    for raw_line in markdown_text.splitlines():
+        stripped = raw_line.strip()
+
+        if not stripped:
+            flush_paragraph()
+            flush_list()
+            continue
+
+        if stripped.startswith("## "):
+            flush_paragraph()
+            flush_list()
+            html_lines.append(f"<h2>{html.escape(stripped[3:].strip())}</h2>")
+        elif stripped.startswith("### "):
+            flush_paragraph()
+            flush_list()
+            html_lines.append(f"<h3>{html.escape(stripped[4:].strip())}</h3>")
+        elif stripped.startswith("- "):
+            flush_paragraph()
+            list_items.append(stripped[2:].strip())
+        else:
+            flush_list()
+            paragraph.append(stripped)
+
+    flush_paragraph()
+    flush_list()
+    return "\n".join(html_lines)
+
+
+def publish_manual_article(manual_path):
+    """指定記事をMuscleLove画像つきで公開投稿する"""
+    if not os.path.exists(manual_path):
+        print(f"Error: MANUAL_ARTICLE_PATHが見つかりません: {manual_path}")
+        return False
+
+    with open(manual_path, "r", encoding="utf-8") as f:
+        raw = f.read()
+
+    title, categories, body_markdown = parse_manual_article(raw)
+    local_images = scan_local_image_assets()
+    chosen_image = local_images[0] if local_images else ensure_generated_image(["MuscleLove", "ブログ運営"])
+    image_url = upload_image_to_fotolife(chosen_image)
+    if not image_url:
+        print("Error: 手動記事用画像のアップロードに失敗しました。")
+        return False
+
+    if image_url.startswith("[f:"):
+        image_html = f'<p style="text-align:center;">{image_url}</p>'
+    else:
+        image_html = (
+            '<p style="text-align:center;">'
+            f'<img src="{html.escape(image_url)}" alt="{html.escape(title)}" style="max-width:100%;" />'
+            "</p>"
+        )
+
+    content_html = image_html + "\n" + markdown_to_html(body_markdown) + build_profile_link_block()
+    return create_blog_post(title, content_html, categories)
+
+
 def main():
     print("=" * 60)
     print("Hatena Blog 自動投稿スクリプト")
     print(f"実行時刻: {datetime.now(JST).strftime('%Y-%m-%d %H:%M JST')}")
     print("=" * 60)
+
+    if MANUAL_ARTICLE_PATH:
+        print(f"手動記事モード: {MANUAL_ARTICLE_PATH}")
+        if not publish_manual_article(MANUAL_ARTICLE_PATH):
+            print("Error: 手動記事の投稿に失敗しました。")
+            sys.exit(1)
+        print("=" * 60)
+        print("手動記事の投稿完了！")
+        print("=" * 60)
+        return
 
     # 環境変数チェック
     if not HATENA_ID or not HATENA_API_KEY or not HATENA_BLOG_DOMAIN:
