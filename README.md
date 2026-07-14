@@ -1,9 +1,9 @@
 # Hatena Blog Auto Uploader
 
 Google Drive画像を使って、はてなブログへ自動投稿するスクリプトです。
-投稿内容は外部販売や支援サイトへの誘導ページではなく、日常コンテキストから拾ったいろんなテーマの雑記ブログとして生成します。
-「コンテキスト倉庫」から複数ファイルを読み込みますが、本文には生ログを貼らず、公開しても自然な関心テーマだけを薄く反映します。
-Drive画像が無い日でも、リポジトリ内のMuscleLove画像（`og.png` など）を優先して使い、最後の保険としてだけフォールバック画像を自動生成します。
+投稿内容は外部販売や支援サイトへの誘導ページではなく、**普通の個人ブログ**らしい日常雑記として生成します（散歩・コーヒー・料理・天気・ゲーム・読書 等のテーマを、毎回違う自然な文章で）。
+記事本文は `everyday_content.py` の記事エンジンが組み立てます。テーマ／言い回しを増やしたいときは同ファイルの `THEMES` に追記するだけです。
+画像は Drive フォルダ（無難な画像を供給する用途）から取得します。Drive画像が無い日は、ブランド画像を使わず無難なテキストカードを自動生成して保険にします（旧 `og.png` はフォールバックから除外済み）。
 
 ## 必須環境変数
 
@@ -31,10 +31,20 @@ Drive画像が無い日でも、リポジトリ内のMuscleLove画像（`og.png`
 
 ## 仕組み
 
-1. Google Driveから未投稿画像を1枚取得（無ければ `og.png` などのローカルMuscleLove画像）
+1. Google Driveから未投稿画像を1枚取得（無ければ無難なテキストカードを自動生成）
 2. Hatena Fotolifeへアップロード
-3. コンテキスト元ファイル（`.md/.txt/.json`）を収集
-4. 公開向きキーワードだけを抽出して本文/タグへ反映
-5. 日常/趣味/作業/話題メモなどの雑記ブログ調の記事を生成
-6. `PROFILE_LINK` があればプロフィール/活動リンクだけを添える
-7. はてなブログに画像付きで公開投稿
+3. `everyday_content.build_article()` が日常テーマの記事（タイトル・カテゴリ・タグ・本文）を毎回ランダムに生成
+4. 画像を本文先頭に置き、記事本文を続ける（ハッシュタグ羅列やメタ文は付けない）
+5. `PROFILE_LINK` があればプロフィール/活動リンクだけを添える
+6. はてなブログに画像付きで公開投稿
+
+※ 旧仕様（`CONTEXT_SOURCE_DIRS` からキーワードを拾って本文へ反映）は本文生成には使わなくなりました。コンテキスト収集はフォールバックカードのキーワード程度にのみ残っています。
+
+## Local preview / context source notes
+
+- `context/public_context_latest.md` is the safe in-repo fallback context source.
+- Local MuscleLove workspace context is also read when available from `../../../10_事業部/02_MuscleLove事業/...`.
+- The generated context block expands the findings into roughly 1,000 Japanese characters, not just a short memo list.
+- Preview without posting:
+  - PowerShell: `$env:DRY_RUN='1'; python upload.py`
+  - The preview file is `dry_run_hatena_article.html`.

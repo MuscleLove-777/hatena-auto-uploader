@@ -18,8 +18,16 @@ import re
 import xml.etree.ElementTree as ET
 
 import requests
-import gdown
-from PIL import Image, ImageDraw
+import everyday_content
+try:
+    import gdown
+except ImportError:
+    gdown = None
+try:
+    from PIL import Image, ImageDraw
+except ImportError:
+    Image = None
+    ImageDraw = None
 
 JST = timezone(timedelta(hours=9))
 
@@ -34,8 +42,14 @@ MANUAL_ARTICLE_PATH = os.environ.get("MANUAL_ARTICLE_PATH", "").strip()
 IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
 UPLOADED_LOG = "uploaded_hatena.json"
 CONTEXT_FILE_EXTENSIONS = {".md", ".txt", ".json"}
-LOCAL_IMAGE_FILES = ["og.png"]
+CONTEXT_SKIP_DIR_NAMES = {"__pycache__", "apex", "dlsite", "fanza"}
+# 過去のMuscleLoveブランド画像(og.png)はフォールバックから外す。
+# Drive画像が無い日は ensure_generated_image() の無難なカードのみを使う。
+LOCAL_IMAGE_FILES = []
 LOCAL_IMAGE_DIRS = ["images"]
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
 def env_or_default(key, default):
     """空文字を未設定扱いとしてデフォルトを返す"""
     value = os.environ.get(key)
@@ -47,11 +61,23 @@ def env_or_default(key, default):
 
 CONTEXT_MAX_FILES = int(env_or_default("CONTEXT_MAX_FILES", "15"))
 CONTEXT_MAX_CHARS = int(env_or_default("CONTEXT_MAX_CHARS", "900"))
+DRY_RUN = env_or_default("DRY_RUN", "0").lower() in {"1", "true", "yes", "on"}
+DRY_RUN_OUTPUT = env_or_default("DRY_RUN_OUTPUT", "dry_run_hatena_article.html")
+DEFAULT_CONTEXT_SOURCE_DIRS = ",".join(
+    [
+        "context",
+        "../../../10_事業部/02_MuscleLove事業/ambient_agent_context.md",
+        "../../../10_事業部/02_MuscleLove事業/content_queue/context_inbox.md",
+        "../../../10_事業部/02_MuscleLove事業/reports/context_theme_radar_latest.md",
+        "../../../10_事業部/02_MuscleLove事業/reports/ambient_status_latest.md",
+        "../../../10_事業部/02_MuscleLove事業/hatena_drafts",
+    ]
+)
 CONTEXT_SOURCE_DIRS = [
     p.strip()
     for p in env_or_default(
         "CONTEXT_SOURCE_DIRS",
-        "context,../../00_本部_オーケストレーター/80_コンテキスト倉庫,../../004_MuscleLove/dashboard/daily_ga4",
+        DEFAULT_CONTEXT_SOURCE_DIRS,
     ).split(",")
     if p.strip()
 ]
@@ -197,6 +223,8 @@ DESCRIPTION_TEMPLATES = [
 
 STOP_WORDS = {
     "https", "http", "www", "com", "note", "with", "from", "that", "this",
+    "file", "latest", "public", "current", "updated", "generated", "status",
+    "queue", "ready", "rows", "line",
     "する", "して", "ある", "ない", "よう", "ため", "こと", "もの", "また", "です",
     "ます", "から", "まで", "など", "より", "れる", "られ", "できる", "いる",
     "github", "token", "secret", "password", "api", "apikey", "key", "env", "json",
@@ -217,34 +245,87 @@ SENSITIVE_CONTEXT_PATTERNS = [
 ]
 
 
-def collect_context_snippets():
-    """設定ディレクトリからコンテキスト文字列を収集"""
-    snippets = []
-    for source_dir in CONTEXT_SOURCE_DIRS:
-        if not os.path.isdir(source_dir):
+def resolve_context_path(source_path):
+    """環境変数の相対パスを、このスクリプトの場所から解決する"""
+    expanded = os.path.expandvars(os.path.expanduser(source_path))
+    if os.path.isabs(expanded):
+        return os.path.normpath(expanded)
+    return os.path.normpath(os.path.join(SCRIPT_DIR, expanded))
+
+
+def iter_context_candidates(source_path):
+    resolved = resolve_context_path(source_path)
+    if os.path.isfile(resolved):
+        return [resolved]
+    if not os.path.isdir(resolved):
+        print(f"Context source not found: {source_path} -> {resolved}")
+        return []
+
+    candidates = []
+    for root, dirs, filenames in os.walk(resolved):
+        dirs[:] = [d for d in dirs if d.lower() not in CONTEXT_SKIP_DIR_NAMES]
+        for fname in filenames:
+            ext = os.path.splitext(fname)[1].lower()
+            if ext in CONTEXT_FILE_EXTENSIONS:
+                candidates.append(os.path.join(root, fname))
+    candidates.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+    return candidates[:CONTEXT_MAX_FILES]
+
+
+def sanitize_context_text(raw):
+    text = raw.replace("\ufeff", "")
+    for pattern in SENSITIVE_CONTEXT_PATTERNS:
+        text = pattern.sub("[redacted]", text)
+
+    public_lines = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped in {"---", "```"}:
             continue
-        candidates = []
-        for root, _, filenames in os.walk(source_dir):
-            for fname in filenames:
-                ext = os.path.splitext(fname)[1].lower()
-                if ext in CONTEXT_FILE_EXTENSIONS:
-                    candidates.append(os.path.join(root, fname))
-        candidates.sort(key=lambda p: os.path.getmtime(p), reverse=True)
-        for path in candidates[:CONTEXT_MAX_FILES]:
+        lowered = stripped.lower()
+        if stripped.startswith("#"):
+            continue
+        if lowered.startswith(("updated:", "generated:", "last updated:", "this file is intentionally")):
+            continue
+        if any(word in lowered for word in ["secret", "token", "password", "credential", "cookie"]):
+            continue
+        if stripped.startswith(("```", "|")):
+            continue
+        public_lines.append(stripped)
+
+    clean = re.sub(r"https?://\S+", "", " ".join(public_lines))
+    clean = re.sub(r"\s+", " ", clean).strip()
+    return clean
+
+
+def collect_context_snippets():
+    """設定ファイル/ディレクトリから公開向けコンテキスト文字列を収集"""
+    snippets = []
+    seen_paths = set()
+    for source in CONTEXT_SOURCE_DIRS:
+        for path in iter_context_candidates(source):
+            norm = os.path.normcase(os.path.abspath(path))
+            if norm in seen_paths:
+                continue
+            seen_paths.add(norm)
             try:
                 with open(path, "r", encoding="utf-8") as f:
                     raw = f.read().strip()
                 if not raw:
                     continue
-                clean = re.sub(r"\s+", " ", raw)
+                clean = sanitize_context_text(raw)
+                if not clean:
+                    continue
                 snippets.append(
                     {
                         "path": os.path.basename(path),
                         "text": clean[:CONTEXT_MAX_CHARS],
+                        "mtime": os.path.getmtime(path),
                     }
                 )
             except Exception as e:
                 print(f"コンテキスト読込失敗: {path} ({e})")
+    snippets.sort(key=lambda item: item["mtime"], reverse=True)
     return snippets
 
 
@@ -264,22 +345,139 @@ def extract_context_keywords(context_text):
     return ranked
 
 
+def select_public_excerpt(text, max_chars=180):
+    segments = re.split(r"(?<=[。.!?])\s+|\s+-\s+", text)
+    for segment in segments:
+        excerpt = segment.strip(" -#\t")
+        if len(excerpt) < 18:
+            continue
+        lowered = excerpt.lower()
+        if any(word in lowered for word in ["secret", "token", "password", "credential", "cookie"]):
+            continue
+        if "\\" in excerpt or "/" in excerpt[:80]:
+            continue
+        if len(excerpt) > max_chars:
+            excerpt = excerpt[: max_chars - 1].rstrip() + "…"
+        return excerpt
+    return text[:max_chars].rstrip() + ("…" if len(text) > max_chars else "")
+
+
+def build_context_paragraphs(excerpts, keywords):
+    focus = "、".join(keywords[:4]) if keywords else "日常の作業ログ、気になった話、発信の改善"
+    primary = excerpts[0] if excerpts else "手元のメモを見直すと、ただの作業報告ではなく、判断の理由や迷った点まで残すことが大事だと分かります。"
+    secondary = excerpts[1] if len(excerpts) > 1 else primary
+    tertiary = excerpts[2] if len(excerpts) > 2 else secondary
+
+    paragraphs = [
+        (
+            f"今日のコンテキストを拾ってみると、中心にあるのは「{focus}」でした。"
+            "ただ出来事を並べるだけだと、あとから読んだときに何が変わったのか分かりにくい。"
+            "なので今日は、手元のメモに残っていた断片をそのまま貼るのではなく、そこから見える発見を少し長めに整理しておきます。"
+        ),
+        (
+            f"まず気になったのは、「{primary}」というメモです。"
+            "これは単なる作業ログというより、発信を続けるときの厚みの作り方に近い話だと思いました。"
+            "情報を増やすだけなら自動化でかなり進められますが、読んだ人に残るのは、どこで迷ったのか、何を試して、どこを直したのかという判断の筋道です。"
+        ),
+        (
+            f"次に見えたのは、「{secondary}」という流れです。"
+            "ここから分かるのは、コンテンツ運用も一回作って終わりではなく、欠けている部分を見つけて少しずつ補うものだということです。"
+            "大きな改善を一気に狙うより、本文の情報量、タグの自然さ、読者が読み進めやすい構成を毎回少しだけ良くする方が、長く続ける運用には合っています。"
+        ),
+        (
+            f"もう一つの断片は、「{tertiary}」です。"
+            "ここは地味ですが重要で、同じ言い回しや同じタグばかりになると、記事が更新されていても中身が動いていないように見えます。"
+            "だから、今日のようにコンテキストから拾った発見を本文に反映して、毎回少し違う視点を入れることが必要になります。"
+        ),
+        (
+            "全体としての発見は、MuscleLoveの発信は筋トレやAI活用の話題そのものだけではなく、"
+            "その裏側にある試行錯誤、判断、改善のログを見せた方が読み物として成立しやすいということです。"
+            "短いメモだけだと「何を見ればいいのか」が伝わりませんが、背景と次のアクションまで書くと、読者も自分の作業や発信に置き換えやすくなります。"
+        ),
+        (
+            "次に見るポイントは、この記事を読んだあとに何が残るかです。"
+            "今日なら、量を増やすだけではなく判断の理由を混ぜること、欠損を定期的に直すこと、同じ型を使い回しすぎないこと。"
+            "この3つを小さな改善テーマとして残しておけば、次回の投稿でもコンテキストから新しい発見を拾いやすくなります。"
+        ),
+    ]
+    return paragraphs
+
+
 def build_context_block(snippets, keywords):
     """本文に入れる公開向けコンテキストHTMLを作成"""
     if not snippets:
-        return "<p>今日の文脈メモ: 日常、趣味、作業、気になる話題を少しずつ整理中です。</p>"
-    keyword_items = "".join([f"<li>{kw}</li>" for kw in keywords[:5]]) or "<li>日常</li><li>趣味</li><li>雑記</li>"
+        fallback_paragraphs = build_context_paragraphs([], keywords)
+        return (
+            "<div style='text-align:left;max-width:760px;margin:24px auto 0;'>"
+            "<h3>コンテキストからの発見</h3>"
+            + "".join(f"<p>{html.escape(paragraph)}</p>" for paragraph in fallback_paragraphs)
+            + "</div>"
+        )
+
+    keyword_items = "".join(
+        [f"<li>{html.escape(kw)}</li>" for kw in keywords[:5]]
+    ) or "<li>日常</li><li>趣味</li><li>雑記</li>"
+    excerpt_items = []
+    excerpts = []
+    for idx, snippet in enumerate(snippets[:3], start=1):
+        excerpt = select_public_excerpt(snippet["text"])
+        if not excerpt:
+            continue
+        excerpts.append(excerpt)
+        label = html.escape(f"メモ{idx}: {snippet['path']}")
+        excerpt_items.append(
+            f"<li><strong>{label}</strong><br />{html.escape(excerpt)}</li>"
+        )
+    if not excerpt_items:
+        excerpt_items.append("<li>今日は手元のメモから、公開できる話題だけを軽く整理しています。</li>")
+    paragraphs = build_context_paragraphs(excerpts, keywords)
+
     return (
-        "<div style='text-align:left;max-width:760px;margin:0 auto;'>"
-        "<h3>今日拾った文脈</h3>"
-        "<p>手元のメモから、公開しても自然な関心テーマだけを拾っています。</p>"
+        "<div style='text-align:left;max-width:760px;margin:24px auto 0;'>"
+        "<h3>コンテキストからの発見</h3>"
+        "<p>手元のメモから拾った断片を、読み物として残るように少し長めに整理しています。</p>"
+        + "".join(f"<p>{html.escape(paragraph)}</p>" for paragraph in paragraphs)
+        + "<h4>拾った断片</h4>"
+        + "<ul>" + "".join(excerpt_items) + "</ul>"
+        "<p>今日の主なキーワード</p>"
         "<ul>" + keyword_items + "</ul>"
         "</div>"
     )
 
 
+def write_dry_run_preview(title, content_html, tags, snippets):
+    output_path = DRY_RUN_OUTPUT
+    if not os.path.isabs(output_path):
+        output_path = os.path.join(SCRIPT_DIR, output_path)
+    preview = f"""<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>{html.escape(title)}</title>
+  <style>
+    body {{ font-family: sans-serif; max-width: 860px; margin: 32px auto; line-height: 1.7; }}
+    img {{ max-width: 100%; }}
+  </style>
+</head>
+<body>
+  <h1>{html.escape(title)}</h1>
+  <p>tags: {html.escape(', '.join(tags))}</p>
+  {content_html}
+  <hr />
+  <p>context snippets used: {len(snippets)}</p>
+</body>
+</html>
+"""
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(preview)
+    print(f"DRY_RUN preview wrote: {output_path}")
+
+
 def ensure_generated_image(keywords):
     """入力画像がないときのフォールバック画像を生成"""
+    if Image is None or ImageDraw is None:
+        raise RuntimeError("Pillow is required to generate a fallback image when no local image exists.")
+
     os.makedirs("images", exist_ok=True)
     image_path = os.path.join("images", f"auto_context_{datetime.now(JST).strftime('%Y%m%d_%H%M%S')}.png")
 
@@ -329,7 +527,7 @@ def save_uploaded(uploaded):
 
 
 def scan_local_image_assets():
-    """Drive未設定時に使うリポジトリ内のMuscleLove画像を探す"""
+    """Drive未設定時に使うリポジトリ内のローカル画像を探す"""
     image_files = []
     for path in LOCAL_IMAGE_FILES:
         if os.path.exists(path) and os.path.splitext(path)[1].lower() in IMAGE_EXTENSIONS:
@@ -347,14 +545,17 @@ def scan_local_image_assets():
                 if ext in IMAGE_EXTENSIONS:
                     image_files.append(fpath)
 
-    print(f"ローカルMuscleLove画像ファイル数: {len(image_files)}")
+    print(f"ローカル画像ファイル数: {len(image_files)}")
     return image_files
 
 
 def download_images_from_gdrive():
     """Google Driveフォルダから画像一覧を取得してダウンロード"""
     if not GDRIVE_FOLDER_ID:
-        print("GDRIVE_FOLDER_ID_HATENA が未設定のため、ローカルMuscleLove画像を使います。")
+        print("GDRIVE_FOLDER_ID_HATENA が未設定のため、ローカル画像を使います。")
+        return scan_local_image_assets()
+    if gdown is None:
+        print("gdown is not installed; using local images instead.")
         return scan_local_image_assets()
 
     url = f"https://drive.google.com/drive/folders/{GDRIVE_FOLDER_ID}"
@@ -391,7 +592,7 @@ def download_images_from_gdrive():
                     image_files.append(fpath)
 
     if not image_files:
-        print("Drive画像が見つからないため、ローカルMuscleLove画像に切り替えます。")
+        print("Drive画像が見つからないため、ローカル画像に切り替えます。")
         image_files = scan_local_image_assets()
 
     print(f"画像ファイル数: {len(image_files)}")
@@ -696,8 +897,10 @@ def main():
 
     # 環境変数チェック
     if not HATENA_ID or not HATENA_API_KEY or not HATENA_BLOG_DOMAIN:
-        print("Error: HATENA_ID, HATENA_API_KEY, HATENA_BLOG_DOMAIN を設定してください。")
-        sys.exit(1)
+        if not DRY_RUN:
+            print("Error: HATENA_ID, HATENA_API_KEY, HATENA_BLOG_DOMAIN を設定してください。")
+            sys.exit(1)
+        print("DRY_RUN: Hatena credentials are missing, so no upload/post will be attempted.")
 
     # 先にコンテキストを集める（画像フォールバックにも利用）
     snippets = collect_context_snippets()
@@ -705,7 +908,7 @@ def main():
     context_keywords = extract_context_keywords(context_text)
 
     # 画像ダウンロード
-    image_files = download_images_from_gdrive()
+    image_files = scan_local_image_assets() if DRY_RUN else download_images_from_gdrive()
     if not image_files:
         print("入力画像が見つからないため、フォールバック画像を自動生成します。")
         image_files = [ensure_generated_image(context_keywords)]
@@ -717,9 +920,12 @@ def main():
     # 未投稿の画像をフィルタ
     unposted = [f for f in image_files if os.path.basename(f) not in uploaded_names]
     if not unposted:
-        print("全画像が投稿済みです。ログをリセットします。")
-        uploaded = []
-        save_uploaded(uploaded)
+        if DRY_RUN:
+            print("全画像が投稿済みです。DRY_RUNのためログはリセットせずプレビューします。")
+        else:
+            print("全画像が投稿済みです。ログをリセットします。")
+            uploaded = []
+            save_uploaded(uploaded)
         unposted = image_files
 
     # ランダムに1枚選択
@@ -728,54 +934,43 @@ def main():
     print(f"選択された画像: {chosen_name}")
 
     # 1. Hatena Fotolifeに画像アップロード
-    image_url = upload_image_to_fotolife(chosen)
-    if not image_url:
-        print("Error: 画像アップロードに失敗しました。")
-        sys.exit(1)
-
-    # 2. コンテキスト反映 + ブログ記事生成
-    tags = get_content_tags(chosen_name)
-    for kw in context_keywords[:3]:
-        if kw not in tags:
-            tags.append(kw)
-    category = random.choice(CATEGORY_TEMPLATES)
-    title = random.choice(TITLE_TEMPLATES).format(category=category)
-    description = random.choice(DESCRIPTION_TEMPLATES)
-    if context_keywords:
-        description += f" 今日の注目テーマ: {', '.join(context_keywords[:3])}。"
-    hashtags = " ".join([f"#{t}" for t in tags[:8]])
-
-    # 画像URLの処理（はてな記法の場合はHTMLに変換）
-    if image_url.startswith('[f:'):
-        # はてな記法の場合はそのままcontent内で使う
-        img_html = image_url
-        content_html = random.choice(BODY_TEMPLATES).format(
-            image_url="",
-            title=title,
-            description=description,
-            hashtags=hashtags,
-        )
-        # image_urlのプレースホルダーを置換
-        content_html = content_html.replace(
-            '<p><img src="" alt="{}" style="max-width:100%;" /></p>'.format(title),
-            f'<p>{img_html}</p>'
-        )
+    if DRY_RUN:
+        image_url = chosen
     else:
-        content_html = random.choice(BODY_TEMPLATES).format(
-            image_url=image_url,
-            title=title,
-            description=description,
-            hashtags=hashtags,
+        image_url = upload_image_to_fotolife(chosen)
+        if not image_url:
+            print("Error: 画像アップロードに失敗しました。")
+            sys.exit(1)
+
+    # 2. 日常記事エンジンで「普通の雑記ブログ」記事を生成（毎回テーマ・文章が変わる）
+    article = everyday_content.build_article()
+    title = article["title"]
+    # テーマのカテゴリを先頭に、残りをタグとして付与（重複は除去）
+    tags = [article["category"]] + [t for t in article["tags"] if t != article["category"]]
+
+    # 画像は本文の先頭に中央寄せで置く（はてな記法 [f:...] とURLの両対応）
+    if image_url.startswith('[f:'):
+        image_html = f'<p style="text-align:center;">{image_url}</p>'
+    else:
+        image_html = (
+            '<p style="text-align:center;">'
+            f'<img src="{html.escape(image_url)}" alt="{html.escape(title)}" style="max-width:100%;" />'
+            "</p>"
         )
 
-    # 個人文脈メモ + 任意プロフィールリンク
-    context_block = build_context_block(snippets, context_keywords)
+    # 画像 + 記事本文 + （任意）プロフィールリンク。以前の定型ハッシュタグ羅列や
+    # 「コンテキストからの発見」メタブロックは、いかにも自動投稿に見えるため廃止。
     content_html = (
-        content_html.rstrip()
+        image_html
         + "\n"
-        + context_block
+        + article["body_html"]
         + build_profile_link_block()
     )
+
+    if DRY_RUN:
+        write_dry_run_preview(title, content_html, tags, snippets)
+        print("DRY_RUN complete: skipped Hatena Fotolife upload, blog post, and uploaded log update.")
+        return
 
     # 3. ブログ記事投稿
     result = create_blog_post(title, content_html, tags)
