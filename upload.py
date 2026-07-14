@@ -909,6 +909,18 @@ def main():
 
     # 画像ダウンロード
     image_files = scan_local_image_assets() if DRY_RUN else download_images_from_gdrive()
+
+    # 無難画像(SFW)だけを投稿対象にする。SFW供給パイプラインが入れる画像は
+    # ファイル名が "sfw_" で始まる（run_sfw_hatena.py の dest_name 規則）。
+    # 供給元フォルダに旧来の筋肉/ビキニ画像(image_001_* 等)が残っていても、
+    # ここで除外されるため投稿されない。該当が無ければ無難カードにフォールバック。
+    sfw_files = [f for f in image_files if os.path.basename(f).lower().startswith("sfw_")]
+    if sfw_files:
+        image_files = sfw_files
+    else:
+        print("SFW画像(sfw_*)が見つからないため、無難カードにフォールバックします。")
+        image_files = []
+
     if not image_files:
         print("入力画像が見つからないため、フォールバック画像を自動生成します。")
         image_files = [ensure_generated_image(context_keywords)]
