@@ -24,9 +24,6 @@ jobs:
       HATENA_API_KEY: ${{ secrets.HATENA_API_KEY_MUSCLELOVE777 }}
       HATENA_BLOG_DOMAIN: ${{ secrets.HATENA_BLOG_DOMAIN_MUSCLELOVE777 }}
       GDRIVE_FOLDER_ID_HATENA: ${{ secrets.GDRIVE_FOLDER_ID_HATENA_MUSCLELOVE777 }}
-      CONTEXT_SOURCE_DIRS: ${{ vars.CONTEXT_SOURCE_DIRS }}
-      CONTEXT_MAX_FILES: ${{ vars.CONTEXT_MAX_FILES }}
-      CONTEXT_MAX_CHARS: ${{ vars.CONTEXT_MAX_CHARS }}
       PROFILE_LINK: ${{ vars.PROFILE_LINK }}
       MANUAL_ARTICLE_PATH: ${{ github.event.inputs.manual_article_path }}
 
@@ -41,6 +38,9 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Safety self-check (fail before posting anything)
+        run: python safety_guard.py
 
       - name: Run upload script (attempt 1)
         id: attempt1
