@@ -426,11 +426,16 @@ def build_article(seed=None):
     body = rng.choice(theme["bodies"])
     close = rng.choice(theme["closes"])
 
-    paragraphs = [intro, body, close]
-    # たまに本題をもう1段落増やして、記事の長さにも揺らぎを持たせる
-    if rng.random() < 0.4:
-        extra_body = rng.choice([b for b in theme["bodies"] if b != body] or [body])
-        paragraphs.insert(2, extra_body)
+    # 2026-07-23: 「内容が薄い」対策で本題は常に2段落以上にする。
+    # さらに30%で3段落目を足し、長さに揺らぎも残す。
+    paragraphs = [intro, body]
+    others = [b for b in theme["bodies"] if b != body]
+    rng.shuffle(others)
+    if others:
+        paragraphs.append(others.pop())
+    if others and rng.random() < 0.3:
+        paragraphs.append(others.pop())
+    paragraphs.append(close)
 
     body_html = "".join(f"<p>{html.escape(p)}</p>" for p in paragraphs)
 

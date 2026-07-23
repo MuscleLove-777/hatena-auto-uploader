@@ -64,6 +64,36 @@ def env_or_default(key, default):
 DRY_RUN = env_or_default("DRY_RUN", "0").lower() in {"1", "true", "yes", "on"}
 DRY_RUN_OUTPUT = env_or_default("DRY_RUN_OUTPUT", "dry_run_hatena_article.html")
 
+# --- 画像ポリシー（2026-07-23変更: 微エロまで許容） ---
+# 旧: sfw_ 接頭辞の無難画像のみ → 新: 露骨タグを含むファイルだけ除外。
+# マイクロビキニ/水着/筋肉グラビア調はOK。GIF(動画枠)も対象。
+# ファイル名で判定できない無名ファイル(image_001_* 等)は通す。
+NSFW_BLOCK_TERMS = [
+    'nsfw', 'r18', 'r-18', 'xxx', 'hentai',
+    'sex', 'fuck', 'fella', 'blowjob', 'handjob', 'paizuri', 'titjob',
+    'cum', 'bukkake', 'creampie', 'orgasm', 'ahegao',
+    'penis', 'peniss', 'cock', 'dick', 'pussy', 'vagina', 'genital',
+    'nipple', 'areola', 'topless', 'nude', 'naked', 'no bra', 'no panties',
+    'insertion', 'dildo', 'vibrator', 'bondage', 'shibari', 'gangbang',
+    'spread legs', 'spread pussy', 'masturbat', 'squirt', 'mosaic',
+    'licking armpit', 'armpit lick', 'armpit hold', 'armpit fucking',
+]
+
+
+def is_mild_ok_image(path_or_name):
+    """露骨タグを含むファイルだけ弾く（含まなければ安全側で通す）"""
+    s = str(path_or_name).lower().replace('_', ' ').replace('-', ' ')
+    return not any(term in s for term in NSFW_BLOCK_TERMS)
+
+
+# 画像の直下に添える一言（日常記事と画像の橋渡し。安全語のみ）
+IMAGE_CAPTION_LINES = [
+    "本題の前に、今日のお気に入りの一枚から。",
+    "最近いいなと思ったビジュアルを貼っておきます。目の保養にどうぞ。",
+    "今日の一枚。鍛え上げた美しさって、見ていて元気が出ます。",
+    "まずは今日のベストショットから。それでは本題へ。",
+]
+
 # 作業メモ等の外部ディレクトリを読み込む仕組みは廃止した。
 # 記事本文・タグ・画像は everyday_content の固定コーパスと
 # SFW画像だけで完結させ、手元の資料が本文へ流れ込む経路自体を持たない。
@@ -548,15 +578,17 @@ def main():
     # 画像ダウンロード
     image_files = scan_local_image_assets() if DRY_RUN else download_images_from_gdrive()
 
-    # 無難画像(SFW)だけを投稿対象にする。SFW供給パイプラインが入れる画像は
-    # ファイル名が "sfw_" で始まる（run_sfw_hatena.py の dest_name 規則）。
-    # 供給元フォルダに旧来の筋肉/ビキニ画像(image_001_* 等)が残っていても、
-    # ここで除外されるため投稿されない。該当が無ければ無難カードにフォールバック。
-    sfw_files = [f for f in image_files if os.path.basename(f).lower().startswith("sfw_")]
-    if sfw_files:
-        image_files = sfw_files
+    # 微エロOKポリシー(2026-07-23): sfw_接頭辞限定を廃止し、
+    # 露骨タグを含むファイルだけを除外する。マイクロビキニ/水着/筋肉グラビア調、
+    # 旧来の筋肉画像(image_001_* 等)、GIF(動画枠)はすべて投稿対象。
+    mild_ok = [f for f in image_files if is_mild_ok_image(f)]
+    blocked = len(image_files) - len(mild_ok)
+    if blocked:
+        print(f"露骨タグのため除外した画像: {blocked}件")
+    if mild_ok:
+        image_files = mild_ok
     else:
-        print("SFW画像(sfw_*)が見つからないため、無難カードにフォールバックします。")
+        print("投稿可能な画像が見つからないため、無難カードにフォールバックします。")
         image_files = []
 
     if not image_files:
@@ -608,10 +640,19 @@ def main():
             "</p>"
         )
 
-    # 画像 + 記事本文 + （任意）プロフィールリンク。以前の定型ハッシュタグ羅列や、
-    # 手元のメモから拾った内容を要約して載せるブロックは廃止済み。
+    # 画像直下の一言キャプション（日常記事と画像の橋渡し）
+    caption_html = (
+        '<p style="text-align:center;color:#888;font-size:0.9em;">'
+        f'{random.choice(IMAGE_CAPTION_LINES)}</p>'
+    )
+
+    # 画像 + キャプション + 記事本文 + （任意）プロフィールリンク。
+    # 以前の定型ハッシュタグ羅列や、手元のメモから拾った内容を要約して
+    # 載せるブロックは廃止済み。
     content_html = (
         image_html
+        + "\n"
+        + caption_html
         + "\n"
         + article["body_html"]
         + build_profile_link_block()
