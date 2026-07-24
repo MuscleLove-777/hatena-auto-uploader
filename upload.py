@@ -386,10 +386,12 @@ def create_blog_post(title, content_html, categories):
     blog_domain = get_blog_domain()
     endpoint = f"https://blog.hatena.ne.jp/{HATENA_ID}/{blog_domain}/atom/entry"
 
-    # カテゴリXMLを生成
+    # カテゴリXMLを生成（term は属性値なのでエスケープする）
     category_xml = ""
     for cat in categories:
-        category_xml += f'  <category term="{cat}" />\n'
+        if not cat:
+            continue
+        category_xml += f'  <category term="{html.escape(str(cat), quote=True)}" />\n'
 
     xml_body = f"""<?xml version="1.0" encoding="utf-8"?>
 <entry xmlns="http://www.w3.org/2005/Atom"
