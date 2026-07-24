@@ -9,7 +9,16 @@ upload.py から build_article() を呼ぶだけで (title, category, tags, body
 """
 
 import html
+import json
 import random
+from pathlib import Path
+
+
+# ローカル生成の長文プール（dashboard/hatena_article_factory が毎朝push）。
+# 中身があればこちらを優先し、無い／壊れているときだけ下の固定コーパスへ落ちる。
+# Actions側は読むだけなので、生成が止まっても投稿は絶対に止まらない（憲法第1条）。
+ARTICLE_POOL_PATH = Path(__file__).resolve().parent / "article_pool.json"
+POOL_MIN_PARAGRAPHS = 4
 
 
 # 全テーマ共通で薄く混ぜる汎用タグ（1〜2個だけ足す）
@@ -412,6 +421,52 @@ def _pick_tags(theme, rng):
     return tags
 
 
+def _load_pool_articles():
+    """article_pool.json の記事一覧を返す。無い/壊れていれば空リスト。"""
+    try:
+        data = json.loads(ARTICLE_POOL_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    articles = data.get("articles") if isinstance(data, dict) else None
+    return articles if isinstance(articles, list) else []
+
+
+def _build_from_pool(rng):
+    """長文プールから1本選ぶ。使える記事が1本も無ければ None（固定コーパスへ）。"""
+    import safety_guard  # 遅延import（safety_guard 側の自己点検との相互参照を避ける）
+
+    candidates = []
+    for a in _load_pool_articles():
+        if not isinstance(a, dict):
+            continue
+        title = str(a.get("title", "")).strip()
+        category = str(a.get("category", "")).strip()
+        paragraphs = [str(p).strip() for p in a.get("paragraphs", []) if str(p).strip()]
+        tags = [str(t).strip() for t in a.get("tags", []) if str(t).strip()]
+        if not (title and category and len(paragraphs) >= POOL_MIN_PARAGRAPHS):
+            continue
+        # 禁止語に触れる記事は選択肢から外す。投稿直前に落として1日ぶん失うより、
+        # ここで静かに捨てて別の記事を使うほうが「止まらない」（憲法第1条）。
+        if safety_guard.find_violations(title, category, tags, paragraphs):
+            continue
+        candidates.append((title, category, tags, paragraphs))
+    if not candidates:
+        return None
+
+    title, category, tags, paragraphs = rng.choice(candidates)
+    if not tags:
+        tags = [category]
+    for e in rng.sample(GENERIC_TAGS, rng.randint(1, 2)):
+        if e not in tags:
+            tags.append(e)
+    return {
+        "title": title,
+        "category": category,
+        "tags": tags,
+        "body_html": "".join(f"<p>{html.escape(p)}</p>" for p in paragraphs),
+    }
+
+
 def build_article(seed=None):
     """日常記事を1本組み立てて返す。
 
@@ -419,6 +474,11 @@ def build_article(seed=None):
       body_html は画像・末尾リンクを含まない本文パラグラフのみ（<p>...</p> の連なり）。
     """
     rng = random.Random(seed)
+
+    pooled = _build_from_pool(rng)
+    if pooled:
+        return pooled
+
     theme = rng.choice(THEMES)
 
     title = rng.choice(theme["titles"])

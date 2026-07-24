@@ -660,9 +660,11 @@ def main():
         + build_profile_link_block()
     )
 
-    # 投稿直前の最終チェック。タイトル・タグ・本文に加えて画像ファイル名も見る。
+    # 投稿直前の最終チェック。本文系は全禁止語、画像ファイル名は brand/internal のみ
+    # （微エロ許容ポリシーで通した素材名で投稿ごと落とさないため）。
     # 1件でも引っかかったら投稿せずに異常終了する（握りつぶさない）。
-    safety_guard.assert_safe(title, tags, article["body_html"], chosen_name)
+    safety_guard.assert_safe(title, tags, article["body_html"])
+    safety_guard.assert_safe_filename(chosen_name)
 
     if DRY_RUN:
         write_dry_run_preview(title, content_html, tags)

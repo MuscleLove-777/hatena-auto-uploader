@@ -106,6 +106,21 @@ def assert_safe(*parts):
     raise SafetyViolation(f"公開不可の語を検出したため投稿を中止しました ({summary})")
 
 
+def assert_safe_filename(name):
+    """画像ファイル名専用のチェック（brand / internal のみ）。
+
+    本文と同じ基準を当てると、微エロ許容ポリシー(2026-07-23)で投稿OKにしたはずの
+    素材名（水着まわりの語を含むもの等）で投稿ごと落ちる。露骨な素材の除外は
+    upload.py の is_mild_ok_image が担当しているので、ここでは
+    「外に出ると困る固有名詞・内部用語」だけを見る。
+    """
+    hits = [h for h in find_violations(name) if h[0] in ("brand", "internal")]
+    if not hits:
+        return
+    summary = ", ".join(f"{cat}:{_mask(term)}" for cat, term in hits)
+    raise SafetyViolation(f"画像ファイル名に公開不可の語があるため投稿を中止しました ({summary})")
+
+
 if __name__ == "__main__":
     # 本文コーパス全体が禁止語に触れていないかを自己点検する
     import everyday_content
