@@ -86,13 +86,33 @@ def is_mild_ok_image(path_or_name):
     return not any(term in s for term in NSFW_BLOCK_TERMS)
 
 
-# 画像の直下に添える一言（日常記事と画像の橋渡し。安全語のみ）
+# 画像の直下に添える一言（日常記事と画像の橋渡し。軽セクシー・ギャル寄り）
 IMAGE_CAPTION_LINES = [
-    "本題の前に、今日のお気に入りの一枚から。",
-    "最近いいなと思ったビジュアルを貼っておきます。目の保養にどうぞ。",
-    "今日の一枚。鍛え上げた美しさって、見ていて元気が出ます。",
-    "まずは今日のベストショットから。それでは本題へ。",
+    "本題の前に、今日のお気に入りの一枚から。まあ見てって♡",
+    "今日のベストショット貼っとくね〜。それでは本編へ。",
+    "まずはこの一枚。鍛えた体、ちょっとは自信あるんだよね笑",
+    "はい今日の自撮り。近づかないでよ〜笑　…では本題。",
 ]
+
+# --- 自分のサービスへの導線（Patreon / X）。2026-07-23ユーザー決定で追加。 ---
+PATREON_LINK = "https://www.patreon.com/cw/MuscleLove?utm_source=hatena"
+X_LINK = "https://x.com/MuscleGirlLove7"
+
+
+def build_sns_cta_block():
+    """記事末尾のPatreon/X誘導カード（ギャル系ティーザー・冪等マーカー付き）"""
+    return (
+        "\n<!-- ML_SNS_CTA -->\n"
+        '<div style="text-align:center;background:#1a1a2e;padding:20px;'
+        'border-radius:10px;margin:24px 0;">'
+        '<p style="font-size:1.2em;color:#FFD700;">🔥 無料で見せられるのはここまで♡</p>'
+        f'<p style="font-size:1.05em;"><a href="{PATREON_LINK}" target="_blank" '
+        'rel="noopener" style="color:#00C9FF;">👉 続きはPatreonでこっそり見せてる 👈</a></p>'
+        f'<p style="font-size:1.05em;">🐦 <a href="{X_LINK}" target="_blank" '
+        'rel="noopener" style="color:#1DA1F2;">Xでもほぼ毎日更新中！ @MuscleGirlLove7</a></p>'
+        '<p style="font-size:0.8em;color:#ccc;">いい子にはもっと見せちゃうかも…♡</p>'
+        "</div>\n<!-- /ML_SNS_CTA -->\n"
+    )
 
 # 作業メモ等の外部ディレクトリを読み込む仕組みは廃止した。
 # 記事本文・タグ・画像は everyday_content の固定コーパスと
@@ -648,15 +668,14 @@ def main():
         f'{random.choice(IMAGE_CAPTION_LINES)}</p>'
     )
 
-    # 画像 + キャプション + 記事本文 + （任意）プロフィールリンク。
-    # 以前の定型ハッシュタグ羅列や、手元のメモから拾った内容を要約して
-    # 載せるブロックは廃止済み。
+    # 画像 + キャプション + 記事本文 + Patreon/X導線 + （任意）プロフィールリンク。
     content_html = (
         image_html
         + "\n"
         + caption_html
         + "\n"
         + article["body_html"]
+        + build_sns_cta_block()
         + build_profile_link_block()
     )
 
