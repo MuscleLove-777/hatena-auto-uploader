@@ -1,14 +1,17 @@
 {
-  "generated_at": "2026-08-23 08:00:18 +0900",
-  "version": "20260823",
+  "generated_at": "2026-11-17 08:05:20 +0900",
+  "version": "20261117",
   "rules": {
     "generic_trend_max": 1,
     "hashlike_ban": true,
     "lanes_must_not_mix": true,
     "safe_fitness_no_adult_or_fetish_terms": true,
     "blocked_platforms_manual_only": true,
+    "blocked_cta_destinations_removed": true,
     "note": "uploaderは自レーンのみ読む。generic_trend_candidatesから使うのは最大1個。",
-    "utm_guide": "発リンクには utm_source=<媒体名>&utm_medium=autopost を必ず付与する。pool_loader.as_insights(lane, platform=媒体名) がCTA内URLへ自動付与する。投稿にはハブor自ブログへの計測可能リンクを最低1本入れる。"
+    "utm_guide": "宣伝先は指定Linktreeのみ。URLに追跡パラメータを付けない。",
+    "promotion_destination": "https://linktr.ee/ILoveMyCats",
+    "promotion_link_only": true
   },
   "ng_words_global": [
     "アツロウ",
@@ -18,26 +21,22 @@
     "アツロー",
     "GOOGLE_API_KEY"
   ],
-  "generic_trend_candidates": [
-    "ジャンプ",
-    "セスキ",
-    "テクノ"
-  ],
+  "generic_trend_candidates": [],
   "lanes": {
     "safe_fitness": {
       "platforms": [
-        "facebook",
-        "mixi",
         "instagram",
+        "tiktok",
         "pinterest",
         "threads",
+        "bluesky",
+        "lemon8",
         "ameblo",
         "rakuten",
         "fc2",
         "hatena",
-        "livedoor",
-        "tiktok",
-        "youtube"
+        "mixi",
+        "facebook"
       ],
       "base_tags": [
         "筋トレ女子",
@@ -56,8 +55,7 @@
         "AIアート"
       ],
       "trend_tags": [
-        "AI",
-        "マッチョ"
+        "AI"
       ],
       "ng_words": [
         "uncensored",
@@ -116,27 +114,138 @@
             "筋肉のラインまで美しい。努力がそのまま形になってる。{tags}",
             "ただ鍛えてるだけじゃない。この完成度。{tags}",
             "{focus}の説得力がすごい。{tags}",
-            "バキバキ。でも美しい。この両立が最高。{tags}"
-          ]
+            "バキバキ。でも美しい。この両立が最高。{tags}",
+            "見てくれ、この存在感。{tags}",
+            "筋肉女子、やっぱりかっこいい。{tags}",
+            "気づいたらもう一回再生してた。{tags}",
+            "強いって、それだけで魅力になる。{tags}",
+            "こういう雰囲気、好きな人いる？{tags}",
+            "一言でいうなら、圧倒的。{tags}",
+            "きれいだけじゃ物足りない人へ。{tags}",
+            "かっこよさで目が止まる。{tags}",
+            "{sport}の魅力、もっと広まってほしい。{tags}",
+            "この迫力、短い動画でも伝わる。{tags}",
+            "見終わるころには筋トレしたくなる。{tags}",
+            "筋肉の美しさって、好みが分かれるのも面白い。{tags}",
+            "華やかさと力強さ、どっちにも惹かれる。{tags}",
+            "今日は言葉少なめで。見ればわかる。{tags}",
+            "強い女性が好きなら、この空気感。{tags}",
+            "憧れるのは、こういうかっこよさ。{tags}",
+            "派手な説明より、この一瞬。{tags}",
+            "何が刺さったか、一言で教えて。{tags}",
+            "鍛えた体の魅力、つい見入ってしまう。{tags}",
+            "筋肉美を楽しむ時間。{tags}"
+          ],
+          "cta_lines": [
+            "https://linktr.ee/ILoveMyCats"
+          ],
+          "priority_urls": [
+            "https://linktr.ee/ILoveMyCats"
+          ],
+          "affiliate_cards": []
+        },
+        "threads": {
+          "base_tags": [
+            "筋肉女子",
+            "筋トレ女子",
+            "女子アスリート",
+            "女性アスリート",
+            "femalemuscle",
+            "musclegirl",
+            "strongwomen",
+            "fitnessmotivation"
+          ],
+          "trend_tags": [],
+          "generic_trend_candidates": [],
+          "generic_trend_max": 1,
+          "max_hashtags": 3,
+          "caption_templates": [
+            "強さに見惚れるって、こういうこと。{tags}",
+            "美しい、で片づけるには強すぎる。{tags}",
+            "この仕上がり、何回でも見てしまう。{tags}",
+            "筋肉のラインまで美しい。努力がそのまま形になってる。{tags}"
+          ],
+          "cta_lines": [
+            "https://linktr.ee/ILoveMyCats"
+          ],
+          "priority_urls": [
+            "https://linktr.ee/ILoveMyCats"
+          ],
+          "affiliate_cards": []
+        },
+        "bluesky": {
+          "base_tags": [
+            "筋肉女子",
+            "筋トレ女子",
+            "女子アスリート",
+            "女性アスリート",
+            "femalemuscle",
+            "musclegirl",
+            "strongwomen",
+            "fitnessmotivation"
+          ],
+          "trend_tags": [],
+          "generic_trend_candidates": [],
+          "generic_trend_max": 1,
+          "max_hashtags": 3,
+          "caption_templates": [
+            "強さに見惚れるって、こういうこと。{tags}",
+            "美しい、で片づけるには強すぎる。{tags}",
+            "この仕上がり、何回でも見てしまう。{tags}",
+            "筋肉のラインまで美しい。努力がそのまま形になってる。{tags}"
+          ],
+          "cta_lines": [
+            "https://linktr.ee/ILoveMyCats"
+          ],
+          "priority_urls": [
+            "https://linktr.ee/ILoveMyCats"
+          ],
+          "affiliate_cards": []
+        },
+        "lemon8": {
+          "base_tags": [
+            "筋肉女子",
+            "筋トレ女子",
+            "女子アスリート",
+            "女性アスリート",
+            "femalemuscle",
+            "musclegirl",
+            "strongwomen",
+            "fitnessmotivation"
+          ],
+          "trend_tags": [],
+          "generic_trend_candidates": [],
+          "generic_trend_max": 1,
+          "max_hashtags": 3,
+          "caption_templates": [
+            "強さに見惚れるって、こういうこと。{tags}",
+            "美しい、で片づけるには強すぎる。{tags}",
+            "この仕上がり、何回でも見てしまう。{tags}",
+            "筋肉のラインまで美しい。努力がそのまま形になってる。{tags}"
+          ],
+          "cta_lines": [
+            "https://linktr.ee/ILoveMyCats"
+          ],
+          "priority_urls": [
+            "https://linktr.ee/ILoveMyCats"
+          ],
+          "affiliate_cards": []
         }
       },
       "cta_lines": [
-        "もっと見たい人はXへ → https://x.com/MuscleGirlLove7",
-        "まとめハブはこちら → https://musclelove-777.github.io/",
-        "フォローで毎日筋肉美が届く💪"
+        "https://linktr.ee/ILoveMyCats"
       ],
       "priority_urls": [
-        "https://musclelove-777.github.io/",
-        "https://x.com/MuscleGirlLove7"
+        "https://linktr.ee/ILoveMyCats"
       ],
       "affiliate_cards": []
     },
     "mature_muscle": {
       "platforms": [
         "tumblr",
+        "misskey",
         "deviantart",
-        "pixiv",
-        "misskey"
+        "pixiv"
       ],
       "base_tags": [
         "筋肉美",
@@ -151,8 +260,7 @@
         "AIイラスト"
       ],
       "trend_tags": [
-        "AI",
-        "マッチョ"
+        "AI"
       ],
       "ng_words": [
         "porn",
@@ -173,13 +281,10 @@
         "未公開はもっとすごい。{tags}"
       ],
       "cta_lines": [
-        "未公開・高解像度はPatreonで → https://www.patreon.com/MuscleGirlLove",
-        "X @MuscleGirlLove7 でほぼ毎日更新 → https://x.com/MuscleGirlLove7"
+        "https://linktr.ee/ILoveMyCats"
       ],
       "priority_urls": [
-        "https://www.patreon.com/MuscleGirlLove",
-        "https://x.com/MuscleGirlLove7",
-        "https://musclelove-777.github.io/"
+        "https://linktr.ee/ILoveMyCats"
       ],
       "affiliate_cards": []
     },
@@ -188,7 +293,8 @@
         "pawoo",
         "boards",
         "booru",
-        "endchan"
+        "endchan",
+        "livedoor"
       ],
       "base_tags": [
         "筋肉美女",
@@ -199,8 +305,7 @@
         "AI美女"
       ],
       "trend_tags": [
-        "AI",
-        "マッチョ"
+        "AI"
       ],
       "ng_words": [],
       "caption_templates": [
@@ -212,281 +317,186 @@
         "このAI×筋肉美、刺さる人には刺さる。{tags}",
         "継続は力なり。今日も積み上げ💪 {tags}",
         "Strong is beautiful💪 {tags}",
-        "全作品まとめはeronaviで。{tags}",
+        "今日の作品、じっくり楽しんで。{tags}",
         "今日の推し筋肉、保存推奨。{tags}"
       ],
       "cta_lines": [
-        "未公開はPatreon → https://www.patreon.com/MuscleGirlLove",
-        "作品ガイド・ランキングはeronaviで検索"
+        "https://linktr.ee/ILoveMyCats"
       ],
       "priority_urls": [
-        "https://www.patreon.com/MuscleGirlLove",
-        "https://musclelove-777.github.io/"
+        "https://linktr.ee/ILoveMyCats"
       ],
       "affiliate_cards": []
     }
   },
   "platform_focus": {
+    "ameblo": {
+      "lane": "safe_fitness",
+      "action": "observe_data",
+      "cadence_hint": "verify_measurement_before_reallocation"
+    },
     "facebook": {
       "lane": "safe_fitness",
-      "action": "amplify",
-      "cadence_hint": "increase_quality_and_frequency"
+      "action": "observe_data",
+      "cadence_hint": "verify_measurement_before_reallocation"
+    },
+    "bluesky": {
+      "lane": "safe_fitness",
+      "action": "observe_data",
+      "cadence_hint": "verify_measurement_before_reallocation"
+    },
+    "deviantart": {
+      "lane": "mature_muscle",
+      "action": "observe_data",
+      "cadence_hint": "verify_measurement_before_reallocation"
+    },
+    "fc2": {
+      "lane": "safe_fitness",
+      "action": "observe_data",
+      "cadence_hint": "verify_measurement_before_reallocation"
+    },
+    "hatena": {
+      "lane": "safe_fitness",
+      "action": "observe_data",
+      "cadence_hint": "verify_measurement_before_reallocation"
+    },
+    "instagram": {
+      "lane": "safe_fitness",
+      "action": "observe_data",
+      "cadence_hint": "verify_measurement_before_reallocation"
+    },
+    "lemon8": {
+      "lane": "safe_fitness",
+      "action": "observe_data",
+      "cadence_hint": "verify_measurement_before_reallocation"
+    },
+    "livedoor": {
+      "lane": "adult_fanza",
+      "action": "observe_data",
+      "cadence_hint": "verify_measurement_before_reallocation"
+    },
+    "mixi": {
+      "lane": "safe_fitness",
+      "action": "observe_data",
+      "cadence_hint": "verify_measurement_before_reallocation"
+    },
+    "pawoo": {
+      "lane": "adult_fanza",
+      "action": "observe_data",
+      "cadence_hint": "verify_measurement_before_reallocation"
+    },
+    "pinterest": {
+      "lane": "safe_fitness",
+      "action": "observe_data",
+      "cadence_hint": "verify_measurement_before_reallocation"
+    },
+    "pixiv": {
+      "lane": "mature_muscle",
+      "action": "observe_data",
+      "cadence_hint": "verify_measurement_before_reallocation"
+    },
+    "rakuten": {
+      "lane": "safe_fitness",
+      "action": "observe_data",
+      "cadence_hint": "verify_measurement_before_reallocation"
+    },
+    "threads": {
+      "lane": "safe_fitness",
+      "action": "observe_data",
+      "cadence_hint": "verify_measurement_before_reallocation"
+    },
+    "tumblr": {
+      "lane": "mature_muscle",
+      "action": "observe_data",
+      "cadence_hint": "verify_measurement_before_reallocation"
     },
     "x": {
       "lane": "mature_muscle",
       "action": "hold",
       "cadence_hint": "manual_dry_run_only"
-    },
-    "mixi": {
-      "lane": "safe_fitness",
-      "action": "amplify",
-      "cadence_hint": "increase_quality_and_frequency"
-    },
-    "tumblr": {
-      "lane": "mature_muscle",
-      "action": "amplify",
-      "cadence_hint": "increase_quality_and_frequency"
-    },
-    "ameblo": {
-      "lane": "safe_fitness",
-      "action": "audit_or_low_cadence",
-      "cadence_hint": "verify_link_and_post_log_before_scaling"
-    },
-    "deviantart": {
-      "lane": "mature_muscle",
-      "action": "audit_or_low_cadence",
-      "cadence_hint": "verify_link_and_post_log_before_scaling"
-    },
-    "fc2": {
-      "lane": "safe_fitness",
-      "action": "audit_or_low_cadence",
-      "cadence_hint": "verify_link_and_post_log_before_scaling"
-    },
-    "hatena": {
-      "lane": "safe_fitness",
-      "action": "audit_or_low_cadence",
-      "cadence_hint": "verify_link_and_post_log_before_scaling"
-    },
-    "instagram": {
-      "lane": "safe_fitness",
-      "action": "audit_or_low_cadence",
-      "cadence_hint": "verify_link_and_post_log_before_scaling"
-    },
-    "livedoor": {
-      "lane": "safe_fitness",
-      "action": "audit_or_low_cadence",
-      "cadence_hint": "verify_link_and_post_log_before_scaling"
-    },
-    "pawoo": {
-      "lane": "adult_fanza",
-      "action": "audit_or_low_cadence",
-      "cadence_hint": "verify_link_and_post_log_before_scaling"
-    },
-    "pinterest": {
-      "lane": "safe_fitness",
-      "action": "audit_or_low_cadence",
-      "cadence_hint": "verify_link_and_post_log_before_scaling"
-    },
-    "pixiv": {
-      "lane": "mature_muscle",
-      "action": "audit_or_low_cadence",
-      "cadence_hint": "verify_link_and_post_log_before_scaling"
-    },
-    "rakuten": {
-      "lane": "safe_fitness",
-      "action": "audit_or_low_cadence",
-      "cadence_hint": "verify_link_and_post_log_before_scaling"
-    },
-    "threads": {
-      "lane": "safe_fitness",
-      "action": "audit_or_low_cadence",
-      "cadence_hint": "verify_link_and_post_log_before_scaling"
     }
   },
-  "variant_weights": {
-    "tumblr.caption": {
-      "0d115b4f": 1.159,
-      "1e53ae32": 1.434,
-      "b8acef31": 1.306,
-      "18927481": 0.978,
-      "cce7b575": 1.399,
-      "923b3ad1": 0.717,
-      "3dc90978": 1.174,
-      "dd699064": 1.076,
-      "af375567": 1.793,
-      "64362e89": 1.614,
-      "65eb7bd5": 1.324,
-      "d1448a80": 0.43,
-      "a913a15c": 0.768,
-      "d05d35f2": 1.673,
-      "7b284970": 0.645,
-      "8998d2e5": 1.229,
-      "b5a0eef4": 0.861,
-      "a9141b6e": 0.896,
-      "a35b58a8": 0.461,
-      "bbcd758b": 1.255,
-      "4d1016c5": 0.269,
-      "ee41a62e": 0.269,
-      "b2010ce5": 0.269
-    },
-    "deviantart.title": {
-      "24de42a3": 1.211,
-      "8f3fc275": 0.341,
-      "c53568a4": 0.383,
-      "debd7c78": 0.665,
-      "45dac961": 2.335,
-      "3573b8f1": 0.287,
-      "35c78f47": 0.766,
-      "af35135e": 0.557,
-      "dd9d4530": 0.742,
-      "6415952f": 0.934,
-      "aaef222e": 1.135,
-      "b21f49eb": 1.293,
-      "211c19b9": 2.748,
-      "d8c1492c": 1.308,
-      "30c0f212": 1.102,
-      "4f013b5a": 1.808,
-      "23483c98": 0.383,
-      "6390b548": 1.695,
-      "62516698": 1.581,
-      "8ba95630": 2.012,
-      "c50ea32a": 0.503,
-      "d24b5592": 0.25,
-      "05dbbfa9": 0.611,
-      "ba14c775": 0.742,
-      "c6fb9091": 1.135,
-      "51c7ec92": 1.203,
-      "8d1cea7f": 0.742,
-      "8b652ebf": 0.742,
-      "73e68c7d": 0.886,
-      "f5b2a28d": 0.599,
-      "85fa59e9": 0.311
-    },
-    "youtube.title": {
-      "e0e12957": 0.893,
-      "4a0cdd28": 1.056,
-      "f6092e4e": 1.09,
-      "b1b5df34": 0.877,
-      "29b2f257": 1.261,
-      "177d303b": 0.799,
-      "2c4804e0": 0.964,
-      "9a6b0229": 0.823,
-      "c4995c17": 1.316,
-      "ed0e5362": 0.921
-    },
-    "youtube.desc": {
-      "a6b65dcd": 0.759,
-      "6fad0332": 1.181,
-      "ce2ac9ae": 0.666,
-      "a1e9fe2e": 1.356,
-      "549568fa": 1.038
-    },
-    "youtube.cta": {
-      "fe6dbc36": 0.961,
-      "532d2222": 0.827,
-      "0b7c18b4": 1.212
-    },
-    "rakuten.title": {
-      "39d014c5": 0.942,
-      "d00860f3": 1.413,
-      "ed29c19d": 0.565,
-      "f26b1b6e": 0.942,
-      "f83f4007": 0.808,
-      "5387d317": 1.131,
-      "de4f6d3f": 0.808,
-      "53d40f29": 0.942,
-      "6535f78c": 1.413,
-      "07c649e5": 1.131,
-      "edd7de36": 0.707,
-      "a9cae8f6": 0.942,
-      "4635d56f": 0.628,
-      "28105c8a": 0.808,
-      "95080833": 0.942,
-      "489bf883": 1.131,
-      "be604b2f": 1.131,
-      "645fae18": 0.942,
-      "412f2855": 1.131,
-      "5938c5f1": 1.131,
-      "47ed4182": 1.413
-    },
-    "rakuten.body": {
-      "7830c70e": 1.165,
-      "54869f81": 0.981,
-      "874d5b75": 0.887,
-      "be8c956b": 1.035,
-      "05a02d48": 0.932
-    }
-  },
+  "variant_weights": {},
   "channel_weights": {
     "facebook": {
       "weight": 1.0,
-      "cadence_factor": 1.25,
-      "action": "amplify"
+      "cadence_factor": 1.0,
+      "action": "observe_data"
     },
     "tumblr": {
       "weight": 1.0,
-      "cadence_factor": 1.25,
-      "action": "amplify"
+      "cadence_factor": 1.0,
+      "action": "observe_data"
     },
     "mixi": {
-      "weight": 0.359,
+      "weight": 0.575,
       "cadence_factor": 1.0,
-      "action": "keep"
+      "action": "observe_data"
     },
     "pinterest": {
       "weight": 0.15,
-      "cadence_factor": 0.75,
-      "action": "explore"
+      "cadence_factor": 0.5,
+      "action": "observe_data"
     },
     "instagram": {
       "weight": 0.15,
-      "cadence_factor": 0.75,
-      "action": "explore"
+      "cadence_factor": 0.5,
+      "action": "observe_data"
     },
     "threads": {
       "weight": 0.15,
+      "cadence_factor": 0.5,
+      "action": "observe_data"
+    },
+    "bluesky": {
+      "weight": 0.15,
       "cadence_factor": 0.75,
-      "action": "explore"
+      "action": "observe_data"
+    },
+    "lemon8": {
+      "weight": 0.15,
+      "cadence_factor": 0.75,
+      "action": "observe_data"
     },
     "ameblo": {
       "weight": 0.15,
-      "cadence_factor": 0.75,
-      "action": "explore"
+      "cadence_factor": 0.5,
+      "action": "observe_data"
     },
     "rakuten": {
       "weight": 0.15,
-      "cadence_factor": 0.75,
-      "action": "explore"
+      "cadence_factor": 0.5,
+      "action": "observe_data"
     },
     "fc2": {
       "weight": 0.15,
-      "cadence_factor": 0.75,
-      "action": "explore"
+      "cadence_factor": 0.5,
+      "action": "observe_data"
     },
     "hatena": {
       "weight": 0.15,
-      "cadence_factor": 0.75,
-      "action": "explore"
+      "cadence_factor": 0.5,
+      "action": "observe_data"
     },
     "livedoor": {
       "weight": 0.15,
-      "cadence_factor": 0.75,
-      "action": "explore"
+      "cadence_factor": 0.5,
+      "action": "observe_data"
     },
     "pixiv": {
       "weight": 0.15,
-      "cadence_factor": 0.75,
-      "action": "explore"
+      "cadence_factor": 0.5,
+      "action": "observe_data"
     },
     "deviantart": {
       "weight": 0.15,
-      "cadence_factor": 0.75,
-      "action": "explore"
+      "cadence_factor": 0.5,
+      "action": "observe_data"
     },
     "pawoo": {
       "weight": 0.15,
-      "cadence_factor": 0.75,
-      "action": "explore"
+      "cadence_factor": 0.5,
+      "action": "observe_data"
     },
     "x": {
       "weight": 0.0,
@@ -495,8 +505,9 @@
     }
   },
   "revenue_mix": {
-    "has_actual": false,
+    "status": "HOLD",
+    "has_actual": null,
     "share_pct": {},
-    "note": "金額は非公開。構成比のみ（uploaderは注力先の判断に使う）"
+    "note": "売上内訳は未確認。注力先や増枠の根拠にしない。金額は非公開。"
   }
 }
